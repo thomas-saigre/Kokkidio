@@ -1,0 +1,81 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# automatically generated folder(s)
+**/build/
+**/_build/
+**/_doc/
+**/_install/
+
+# linecount folder
+out/*
+
+# folder for trying stuff out
+troubleshooting/*
+
+# trash folders
+**/trash/
+
+# hidden files
+.*
+!.gitignore
+
+# documentation
+doc/*
+
+# results files
+**/scripts/timings/
+
+# package installations, general
+/lib/include/*
+/lib/share/*
+/lib/lib/*
+
+# external libs
+/lib/eigen
+/lib/Catch2
+/lib/spdlog
+/lib/fmt
+/lib/boost*
+/lib/inih
+/lib/nameof
+/lib/dlfcn-win32/
+
+# external projects
+/lib/fetchContent
+
+*bak.*
+*.bak
+
+# compile commands symlink for clangd
+./compile_commands.json

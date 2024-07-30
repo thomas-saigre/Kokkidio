@@ -1,0 +1,74 @@
+#include "axpy.hpp"
+
+#ifndef KOKKIDIO_AXPY_TARGET
+#define KOKKIDIO_AXPY_TARGET Target::device
+#endif
+
+namespace Kokkidio::unif
+{
+
+template<Target target, Kernel k>
+void axpy(KOKKIDIO_AXPY_ARGS){
+
+	Kokkidio::EigenDualView<ArrayXs, target>
+		zview {z, DontCopyToTarget};
+
+	Kokkidio::EigenDualView<const ArrayXs, target>
+		xview {x},
+		yview {y};
+
+	Index nRows {z.rows()};
+	auto run = [&](const auto& func) -> void {
+		for (int iter = 0; iter < nRuns; ++iter){
+			parallel_for<target>( nRows, func );
+		}
+	};
+
+	using K = Kernel;
+	if constexpr (k == K::cstyle){
+		auto func = KOKKOS_LAMBDA(int i){
+			auto getData = [&](auto& view){
+				return view.view_target().data();
+			};
+			scalar* zptr { getData(zview) };
+			const scalar
+				* xptr { getData(xview) },
+				* yptr { getData(yview) };
+			zptr[i] = a * xptr[i] + yptr[i];
+		};
+		run(func);
+	} else
+	if constexpr (k == K::kokkos){
+		auto func = KOKKOS_LAMBDA(int i){
+			zview.view_target()(i, 0) = a * 
+				xview.view_target()(i, 0) + 
+				yview.view_target()(i, 0);
+		};
+		auto policy { Kokkos::RangePolicy<ExecutionSpace<target>>(0, nRows) };
+		for (int iter = 0; iter < nRuns; ++iter){
+			Kokkos::parallel_for(policy, func);
+		}
+	} else
+	if constexpr (k == K::kokkidio){
+		auto func = KOKKOS_LAMBDA( ParallelRange<target> rng ){
+			rng(zview) = a * rng(xview) + rng(yview);
+		};
+		run(func);
+	}
+
+	zview.copyToHost();
+}
+
+#define KOKKIDIO_INSTANTIATE(CTARGET, KERNEL) \
+template void axpy<CTARGET, KERNEL>(KOKKIDIO_AXPY_ARGS);
+
+
+KOKKIDIO_INSTANTIATE(KOKKIDIO_AXPY_TARGET, Kernel::cstyle)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_AXPY_TARGET, Kernel::kokkos)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_AXPY_TARGET, Kernel::kokkidio)
+
+
+#undef KOKKIDIO_INSTANTIATE
+#undef KOKKIDIO_DOTPRODUCT_TARGET
+
+} // namespace Kokkidio::unif

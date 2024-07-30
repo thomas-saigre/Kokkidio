@@ -1,0 +1,205 @@
+#include "friction.hpp"
+
+#ifndef KOKKIDIO_FRICTION_TARGET
+// #error "Define KOKKIDIO_FRICTION_TARGET before including this file!"
+// #define KOKKIDIO_FRICTION_TARGET_DEFAULT
+#define KOKKIDIO_FRICTION_TARGET Target::device
+#endif
+
+namespace Kokkidio::unif
+{
+
+template<Target target, Kernel k>
+void friction(
+	ArrayXXs& flux_out,
+	const ArrayXXs& flux_in,
+	const ArrayXXs& d,
+	const ArrayXXs& v,
+	const ArrayXXs& n,
+	int nRuns
+){
+	using K = Kernel;
+	
+	#ifndef NDEBUG
+	auto assertCols = [&](const auto& arr){
+		assert( flux_out.cols() == arr.cols() );
+	};
+	assertCols(flux_in);
+	assertCols(d);
+	assertCols(v);
+	assertCols(n);
+	#endif
+
+	Index nCols { flux_out.cols() };
+
+	Index bufRows;
+	if (k == K::eigen_colwise_fullbuf || k == K::eigen_ranged_fullbuf){
+		bufRows = 3;
+	} else {
+		bufRows = 0;
+	}
+
+	Kokkidio::EigenView<ArrayXXs, target>
+		buf {bufRows, nCols};
+
+	Kokkidio::EigenDualView<ArrayXXs, target>
+		flux_out_view {flux_out, DontCopyToTarget};
+
+	Kokkidio::EigenDualView<const ArrayXXs, target>
+		flux_in_view {flux_in},
+		d_view {d},
+		v_view {v},
+		n_view {n};
+
+	auto run = [&](const auto& func) -> void {
+		for (int iter = 0; iter < nRuns; ++iter){
+			Kokkidio::parallel_for<target>( nCols, func );
+		}
+	};
+
+	#define FRIC_DECLARE_MAPS_NOBUF \
+	ArrayXXsMap flux_out_map {flux_out_view.map_target()}; \
+	ArrayXXsCMap \
+		flux_in_map  {flux_in_view.map_target()}, \
+		d_map  {d_view.map_target()}, \
+		v_map  {v_view.map_target()}, \
+		n_map  {n_view.map_target()};
+
+	#define FRIC_DECLARE_MAPS \
+	[[maybe_unused]] ArrayXXsMap buf_map {buf.map()}; \
+	FRIC_DECLARE_MAPS_NOBUF
+
+	if constexpr ( k == K::cstyle ){
+		auto func = KOKKOS_LAMBDA(int i){
+			FRIC_DECLARE_MAPS_NOBUF
+
+			using Kokkidio::detail::pow;
+			using Kokkidio::detail::sqrt;
+			scalar* flux_out_d {flux_out_map.data()};
+			const scalar
+				* flux_in_d {flux_in_map.data()},
+				* d_d {d_map.data()},
+				* v_d {v_map.data()},
+				* n_d {n_map.data()};
+			scalar
+				vNorm { sqrt( pow(v_d[2 * i], 2) + pow(v_d[2 * i + 1], 2) ) },
+				chezyFac = phys::g * pow(n_d[i], 2) / pow(d_d[i], 1./3),
+				fricFac = chezyFac * vNorm;
+			chezyFac /= d_d[i];
+
+			for (Index row = 0; row<2; ++row){
+				flux_out_d[3 * i + row + 1] =
+				(flux_in_d[3 * i + row + 1] - fricFac * v_d[2 * i + row] ) /
+				( 1 + chezyFac * ( vNorm + pow(v_d[2 * i + row], 2) / vNorm ) );
+			}
+		};
+		run(func);
+	} else
+	if constexpr ( k == K::eigen_colwise_fullbuf ){
+		auto func = KOKKOS_LAMBDA(int i){
+			FRIC_DECLARE_MAPS
+
+			Kokkidio::detail::friction_buf3(
+				buf_map.col(i),
+				flux_out_map.col(i),
+				flux_in_map.col(i),
+				d_map.col(i),
+				v_map.col(i),
+				n_map.col(i)
+			);
+		};
+		run(func);
+	} else
+	if constexpr ( k == K::eigen_colwise_stackbuf ){
+		auto func = KOKKOS_LAMBDA(int i){
+			FRIC_DECLARE_MAPS_NOBUF
+
+			Kokkidio::detail::friction_buf3(
+				Array3s{},
+				flux_out_map.col(i),
+				flux_in_map.col(i),
+				d_map.col(i),
+				v_map.col(i),
+				n_map.col(i)
+			);
+		};
+		run(func);
+	} else
+	if constexpr ( k == K::eigen_ranged_fullbuf ){
+		auto func = KOKKOS_LAMBDA( ParallelRange<target> rng ){
+			// FRIC_DECLARE_MAPS
+
+			// apply_range(Kokkidio::detail::friction_buf3, rng,
+			// 	buf_map, flux_out_map,
+			// 	flux_in_map, d_map, v_map, n_map
+			// );
+
+			apply_range(Kokkidio::detail::friction_buf3, rng,
+				buf, flux_out_view,
+				flux_in_view, d_view, v_view, n_view
+			);
+		};
+		static_assert( detail::is_range_target_invocable<decltype(func), Target::host> );
+		static_assert( detail::is_range_target_invocable<decltype(func), Target::device> );
+		run(func);
+	} else
+	if constexpr ( k == K::eigen_ranged_chunkbuf ){
+		auto chunkBuf { makeBuffer<Array3s, target>(nCols) };
+		// auto func = KOKKOS_LAMBDA( ParallelRange<target> rng ){
+
+		// 	rng.for_each_chunk([&](auto chunk){
+		// 		auto buf { getBuffer(chunkBuf, chunk) };
+		// 		Kokkidio::detail::friction_buf3(
+		// 			buf,
+		// 			chunk(flux_out_view),
+		// 			chunk(flux_in_view),
+		// 			chunk(d_view),
+		// 			chunk(v_view),
+		// 			chunk(n_view)
+		// 		);
+		// 	});
+		// };
+
+		// run(func);
+
+		for (int iter = 0; iter < nRuns; ++iter){
+		parallel_for_chunks<target>(nCols, KOKKOS_LAMBDA(EigenRange<target> chunk){
+			auto buf { getBuffer(chunkBuf, chunk) };
+			Kokkidio::detail::friction_buf3(
+				buf,
+				chunk(flux_out_view),
+				chunk(flux_in_view),
+				chunk(d_view),
+				chunk(v_view),
+				chunk(n_view)
+			);
+		});
+		}
+
+	} else
+	{ assert(false); }
+
+	printd("\tfriction_unif: Kernel returned.\n");
+
+	#undef FRIC_DECLARE_MAPS
+	#undef FRIC_DECLARE_MAPS_NOBUF
+
+	/* Copy results back to host */
+	flux_out_view.copyToHost();
+}
+
+#define KOKKIDIO_INSTANTIATE(CTARGET, KERNEL) \
+template void friction<CTARGET, KERNEL>(KOKKIDIO_FRICTION_ARGS);
+
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::cstyle)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::eigen_colwise_fullbuf)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::eigen_colwise_stackbuf)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::eigen_ranged_fullbuf)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::eigen_ranged_chunkbuf)
+
+
+#undef KOKKIDIO_INSTANTIATE
+#undef KOKKIDIO_FRICTION_TARGET
+// #undef KOKKIDIO_FRICTION_TARGET_DEFAULT
+
+} // namespace Kokkidio::unif

@@ -1,0 +1,105 @@
+#include "friction.hpp"
+
+#ifndef KOKKIDIO_FRICTION_TARGET
+// #error "Define KOKKIDIO_FRICTION_TARGET before including this file!"
+#define KOKKIDIO_FRICTION_TARGET_DEFAULT
+#define KOKKIDIO_FRICTION_TARGET Target::device
+#endif
+
+namespace Kokkidio::unif
+{
+
+
+template<Target target, Kernel k>
+void friction(
+	ArrayXXs& flux_out,
+	const ArrayXXs& flux_in,
+	const ArrayXXs& d,
+	const ArrayXXs& v,
+	const ArrayXXs& n,
+	int nRuns
+){
+	#ifndef NDEBUG
+	auto assertCols = [&](const auto& arr){
+		assert( flux_out.cols() == arr.cols() );
+	};
+	assertCols(flux_in);
+	assertCols(d);
+	assertCols(v);
+	assertCols(n);
+	#endif
+
+	Index nCols { flux_out.cols() };
+
+	Kokkidio::EigenDualView<ArrayXXs, target>
+		flux_out_view {flux_out, DontCopyToTarget};
+
+	Kokkidio::EigenDualView<const ArrayXXs, target>
+		flux_in_view {flux_in},
+		d_view {d},
+		v_view {v},
+		n_view {n};
+
+	/* On the host, this creates a parallel region.
+	 * The separation from non-parallel regions is useful, 
+	 * as variables declared within the parallel region 
+	 * are created for each thread.
+	 * On a device, this does nothing. */
+	// executionContext<target>( [&](){
+	// executionContext(target, // [&](){
+
+		// /* Start tackling some problem with size nCols.
+		//  * On the host, this queries the number of threads
+		//  * and assigns the elements evenly among them. */
+		// Extent<target> xt {nCols};
+
+	/* Declare buffers as needed, which does the following:
+	 * Host:
+		 Buffers are created for each thread (using omp_get_max_threads),
+		 using the number of rows of the type, 
+		 and the chunk size as the number of columns.
+	 * Device:
+		 Only the buffer type is stored.
+		 Buffers are then created within the kernel. */
+	auto chunkBuf { makeBuffer<Array3s, target>(nCols) };
+
+	for (int iter = 0; iter < nRuns; ++iter){
+
+		/* now we can launch the parallel execution of a task. */
+		parallel_for_chunks<target>(nCols, KOKKOS_LAMBDA(Chunk<target> chunk){
+			/* On the host, this maps onto the buffer,
+			 * taking the current chunk size into account.
+			 * On the device, this creates a cheap stack object. */
+			auto loopBuf { getBuffer(chunkBuf, chunk) };
+
+			detail::friction_buf3(
+				loopBuf,
+				chunk(flux_out_view),
+				chunk(flux_in_view),
+				chunk(d_view),
+				chunk(v_view),
+				chunk(n_view)
+			);
+		});
+	}
+
+	/* With the normal "parallel_for" paradigm, it is not possible
+	 * to perform actions with a varying number of parallel elements - 
+	 * at least not without dissolving thread teams 
+	 * and thus having to reallocate buffers etc. */
+	// );
+	// });
+
+	/* Copy results back to host */
+	flux_out_view.copyToHost();
+}
+
+#define KOKKIDIO_INSTANTIATE(CTARGET, KERNEL) \
+template void friction<CTARGET, KERNEL>(KOKKIDIO_FRICTION_ARGS);
+
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::context_ranged)
+
+#undef KOKKIDIO_INSTANTIATE
+#undef KOKKIDIO_FRICTION_TARGET
+
+} // namespace Kokkidio::unif
