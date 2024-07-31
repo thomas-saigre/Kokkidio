@@ -55,6 +55,7 @@ doc/*
 
 # results files
 **/scripts/timings/
+**/timings/
 
 # package installations, general
 /lib/include/*

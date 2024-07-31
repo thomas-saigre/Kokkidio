@@ -180,7 +180,7 @@ fi
 
 sep="	"
 
-outdir="${sd}/timings/`uname -n`/`date --iso-8601`/${scalar}"
+outdir="${sd}/../timings/`uname -n`/`date --iso-8601`/${scalar}"
 outfile="$outdir/${example}_${backend}_${scalar}"
 if [[ "$target" == "gpu" ]]; then
 	outfile+="_gpu"

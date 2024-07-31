@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Kokkos and Eigen must already be installed.
+
 # script path
 sd="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 

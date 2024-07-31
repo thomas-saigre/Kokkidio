@@ -8,7 +8,10 @@ if [[ $(echo $USER) == "psneguir" ]]; then
 
 # hlrn-gpu
 elif [[ $node_name == *"glogin"* ]] || [[ $node_name == *"ggpu"* ]]; then
-	module load cuda/12.1   gcc/9.3.0
+	# module load cuda/12.1   gcc/9.3.0
+	module load cuda gcc
+	# Kokkos_ARCH=Kokkos_ARCH_AMPERE80
+	Kokkos_ARCH=Kokkos_ARCH_HOPPER90
 	# compiler=$(command -v nvcc)
 
 # TU HPC

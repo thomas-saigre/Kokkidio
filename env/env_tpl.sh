@@ -8,9 +8,18 @@ if [[ $(echo $USER) == "psneguir" ]]; then
 
 # hlrn-gpu
 elif [[ $node_name == *"glogin"* ]] || [[ $node_name == *"ggpu"* ]]; then
-	module cmake/3.26.4
+	# module load cmake/3.26.4
+	module load cmake
 	# compiler=$(command -v nvcc)
-	export EIGEN_ROOT="/scratch-emmy/usr/`whoami`/eigen/build"
+	PKGDIR="/scratch-emmy/usr/`whoami`"
+	export EIGEN_ROOT="$PKGDIR/eigen/build"
+	Kokkos_BASE="$PKGDIR/kokkos"
+	# only Kokkos_SRC is required
+	export Kokkos_SRC="$Kokkos_BASE/src/kokkos-dev"
+	# Kokkos_BUILD and Kokkos_INST are optional,
+	# but may be used to specify build/install directories for Kokkos.
+	export Kokkos_BUILD="$Kokkos_BASE/build"
+	export Kokkos_INST="$Kokkos_BASE/install"
 
 # TU HPC
 elif [[ $node_name == "frontend"* ]] || [[ $node_name == "gpu"* ]]; then
