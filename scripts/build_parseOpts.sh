@@ -135,14 +135,14 @@ done
 
 subjects=()
 
-if [ ! -v 1 ]; then
+if [ $# -eq 0 ]; then
 	subjects+=("kokkidio")
+else
+	while [ $# -gt 0 ]; do
+		subjects+=(${1,,})
+		shift
+	done
 fi
-
-while [ -v 1 ]; do
-	subjects+=(${1,,})
-	shift
-done
 
 buildKokkidio=false
 buildTests=false

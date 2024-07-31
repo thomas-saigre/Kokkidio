@@ -5,7 +5,7 @@ set -eu
 # script path
 sd="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
-source "${sd}/scripts/parseOpts.sh"
+source "${sd}/scripts/build_parseOpts.sh"
 
 
 # used by env/env_<backend>.sh
@@ -13,14 +13,14 @@ node_name=$(uname -n)
 
 # copied from oneapi
 prepend_path() (
-  path_to_add="$1"
-  path_is_now="$2"
+	path_to_add="$1"
+	path_is_now="$2"
 
-  if [ "" = "${path_is_now}" ] ; then   # avoid dangling ":"
-    printf "%s" "${path_to_add}"
-  else
-    printf "%s" "${path_to_add}:${path_is_now}"
-  fi
+	if [ "" = "${path_is_now}" ] ; then   # avoid dangling ":"
+		printf "%s" "${path_to_add}"
+	else
+		printf "%s" "${path_to_add}:${path_is_now}"
+	fi
 )
 
 make_title () {
@@ -45,7 +45,7 @@ set_vars () {
 	echo "Retrieving third party library (TPL) variables..."
 	source "${sd}/env/env_tpl.sh"
 
-	if [ ! -v Kokkos_SRC ]; then
+	if [ ! -n "${Kokkos_SRC+x}" ]; then
 		echo "Kokkos source directory not specified."
 		printf '%s%s\n' \
 			"Please set the environment variable \"Kokkos_SRC\" " \
@@ -66,7 +66,7 @@ set_vars () {
 		echo $install_prefix
 		if [[ $buildKokkos == true ]]; then
 			if [[ $buildKokkidio != true ]]; then
-				if [ -v Kokkos_INST ]; then
+				if [ -n "${Kokkos_INST+x}" ]; then
 					printf '%s \n%s \n%s \n%s \n%s \n' \
 						"Found both environment variable " \
 						"	Kokkos_INST=$Kokkos_INST" \
@@ -96,7 +96,7 @@ set_vars () {
 set_gpu_arch() {
 	local backend=$1
 	local required=${2:-false}
-	if [ -v Kokkos_ARCH ]; then
+	if [ -n "${Kokkos_ARCH+x}" ]; then
 		cmakeFlags+=" -D${Kokkos_ARCH}=ON"
 		# Kokkos requires this for SYCL
 		if [[ "$backend" == "sycl" ]]; then
@@ -180,8 +180,8 @@ build_kokkos () {
 
 check_kokkos_build () {
 	echo "Checking Kokkos build..."
-	local kk_testfile="$Kokkos_ROOT/lib/cmake/Kokkos/KokkosConfig.cmake"
-	if [ -f "$kk_testfile" ]; then
+	local kk_testfile="cmake/Kokkos/KokkosConfig.cmake"
+	if [ -f "$Kokkos_ROOT/lib/$kk_testfile" ] || [ -f "$Kokkos_ROOT/lib64/$kk_testfile" ]; then
 		echo "Kokkos_ROOT dir: $Kokkos_ROOT"
 	else
 		echo "Could not find test file: $kk_testfile"
