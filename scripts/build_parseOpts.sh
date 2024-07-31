@@ -39,16 +39,31 @@ echo -n "Synopsis:
   -t, --build-type      : Set build type. Valid options are
                           \"Debug\", \"Release\", and \"all\".
                           Applicable to all subjects.
+
+The default file for specifying machine-specific variables is:
+    <kokkidio>/env/nodes/${node_name}.sh
+but this may be overriden in 
+    <kokkidio>/env/node_patterns.sh
+When these variables are correctly configured, the following command builds all components:
+    ./build.sh -ic kokkos kokkidio tests
 "
 }
 
 noBuild="false"
 noRun="false"
-whichBackend="all"
+backend="default"
 whichScalar="all"
 whichBuildtype="all"
 install_opt="false"
 install_prefix=""
+
+check_backend () {
+	if ! [[ "$1" =~ all|cuda|hip|sycl|omp|cpu_gcc ]]; then
+		echo "Unknown backend: \"$1\". Exiting..."
+		print_help
+		exit
+	fi
+}
 
 ! getopt --test > /dev/null
 if [[ ${PIPESTATUS[0]} -ne 4 ]]; then
@@ -76,12 +91,8 @@ while [ : ]; do
 			exit
 			;;
 		-b | --backend)
-			if ! [[ "$2" =~ all|cuda|hip|sycl|omp|cpu_gcc ]]; then
-				echo "Unknown backend: \"$2\". Exiting..."
-				print_help
-				exit
-			fi
-			whichBackend="$2"
+			check_backend "$2"
+			backend="$2"
 			echo "Backend: \"$2\"."
 			shift 2
 			;;

@@ -5,11 +5,12 @@ set -eu
 # script path
 sd="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
+# used to determine which file in ./env/ to read machine-specific variables from
+node_name=$(uname -n)
+env_dir="${sd}/env"
+
 source "${sd}/scripts/build_parseOpts.sh"
 
-
-# used by env/env_<backend>.sh
-node_name=$(uname -n)
 
 # copied from oneapi
 prepend_path() (
@@ -32,8 +33,7 @@ make_title () {
 # cmakeFlags=""
 
 set_vars () {
-	local backend=$1
-	local buildtype=$2
+	local buildtype=$1
 
 	# reset cmakeFlags between runs/backends etc.
 	cmakeFlags=""
@@ -42,8 +42,25 @@ set_vars () {
 	# Kokkos otherwise emits a warning
 	cmakeFlags+=" -DCMAKE_CXX_EXTENSIONS=OFF"
 
-	echo "Retrieving third party library (TPL) variables..."
-	source "${sd}/env/env_tpl.sh"
+	echo "Retrieving system-specific variables from \"${env_dir}\" ..."
+
+	source "$env_dir/node_patterns.sh"
+	nodefile="$env_dir/nodes/${node_name}.sh"
+	source "$nodefile"
+	# source "$env_dir/env_tpl.sh"
+	if [[ "$backend" == "default" ]]; then
+		if [ -n "${backend_default+x}" ]; then
+			backend=$backend_default
+		else
+			printf '%s \n%s %s' \
+				"Backend not specified and backend_default not defined." \
+				"Please either specify backend as command line option," \
+				"or set the variable \"backend_default\" in $nodefile."
+			print_help
+			exit
+		fi
+	fi
+	echo "Using backend: $backend"
 
 	if [ ! -n "${Kokkos_SRC+x}" ]; then
 		echo "Kokkos source directory not specified."
@@ -87,15 +104,10 @@ set_vars () {
 	Kokkidio_ROOT="${Kokkidio_INST:-$sd/_install}/${backend}/$buildtype"
 	Kokkos_BUILD="${Kokkos_BUILD:-$Kokkos_SRC/_build}/${backend}/$buildtype"
 	Kokkos_ROOT="${Kokkos_INST:-$Kokkos_SRC/_install}/${backend}/$buildtype"
-
-	echo "Retrieving environment variables..."
-	KOKKIDIO_SKIP_BACKEND=false
-	source "$sd/env/env_${backend}.sh"
 }
 
 set_gpu_arch() {
-	local backend=$1
-	local required=${2:-false}
+	local required=${1:-false}
 	if [ -n "${Kokkos_ARCH+x}" ]; then
 		cmakeFlags+=" -D${Kokkos_ARCH}=ON"
 		# Kokkos requires this for SYCL
@@ -103,23 +115,24 @@ set_gpu_arch() {
 			cmakeFlags+=" -DKokkos_ENABLE_UNSUPPORTED_ARCHS=ON"
 		fi
 	else
+		local arch_help=$(printf '%s\n%s\n%s\n' \
+			"Kokkos_ARCH=Kokkos_ARCH_<specifier>" \
+			"You can find the specifiers here:" \
+			"https://kokkos.org/kokkos-core-wiki/keywords.html#architectures" \
+		)
 		if [[ $required == true ]]; then
-			printf '%s\n\t%s\n%s%s' \
-				"Please specify the GPU architecture in env_$backend.sh as" \
-				"Kokkos_ARCH=Kokkos_ARCH_<specifier>" \
-				"You can find the specifiers here: " \
-				"https://kokkos.org/kokkos-core-wiki/keywords.html#architectures"
+			echo "Please specify the GPU architecture in $nodefile as"
+			echo "$arch_help"
 			exit
 		else
 			echo "No GPU architecture specified, falling back to autodetection."
-			echo "You may explicitly specify the GPU architecture in env_$backend.sh."
+			echo "You may explicitly specify the GPU architecture in $nodefile using"
+			echo "$arch_help"
 		fi
 	fi
 }
 
 set_kokkos_targets () {
-	local backend=$1
-
 	# translate to Kokkos naming
 	if [[ $backend == "ompt" ]]; then
 		local kokkos_backend="openmptarget"
@@ -158,8 +171,7 @@ build_cmake () {
 }
 
 build_kokkos () {
-	local backend=$1
-	local buildtype=$2
+	local buildtype=$1
 
 	make_title "Building Kokkos for ${backend^^}, build type \"$buildtype\"."
 
@@ -180,18 +192,22 @@ build_kokkos () {
 
 check_kokkos_build () {
 	echo "Checking Kokkos build..."
-	local kk_testfile="cmake/Kokkos/KokkosConfig.cmake"
-	if [ -f "$Kokkos_ROOT/lib/$kk_testfile" ] || [ -f "$Kokkos_ROOT/lib64/$kk_testfile" ]; then
-		echo "Kokkos_ROOT dir: $Kokkos_ROOT"
-	else
-		echo "Could not find test file: $kk_testfile"
-		exit
-	fi
+	local kk_testfile_tail="cmake/Kokkos/KokkosConfig.cmake"
+	for subdir in lib lib64; do
+		local kk_testfile="$Kokkos_ROOT/$subdir/$kk_testfile_tail"
+		echo "Checking for Kokkos cmake config \"$kk_testfile\"..."
+		if [ -f "$kk_testfile" ]; then
+			echo "Kokkos_ROOT dir: $Kokkos_ROOT"
+			return
+		fi
+	done
+
+	echo "Could not find Kokkos cmake config file! Did you install after building?"
+	exit
 }
 
 build_kokkidio () {
-	local backend=$1
-	local buildtype=$2
+	local buildtype=$1
 
 	make_title "Configuring Kokkidio for ${backend^^}, build type \"$buildtype\"."
 
@@ -204,16 +220,15 @@ build_kokkidio () {
 }
 
 build_tests () {
-	local backend=$1
-	local buildtype=$2
-	local scalar=$3
+	local buildtype=$1
+	local scalar=$2
 
 	make_title "Building tests with ${backend^^}, build type \"$buildtype\", scalar type \"$scalar\"."
 
 	export KOKKIDIO_REAL_SCALAR=$scalar
 	builddir="_build/tests/$backend/$buildtype/$scalar"
 
-	set_kokkos_targets "$backend"
+	set_kokkos_targets
 	cmakeFlags+=" -DKokkos_ROOT=$Kokkos_ROOT"
 	cmakeFlags+=" -DKokkidio_ROOT=$Kokkidio_ROOT"
 
@@ -249,47 +264,43 @@ build_tests () {
 	fi
 }
 
-build_all () {
-	local backend=$1
-	if [[ "$whichBackend" =~ all|$backend ]]; then
-
-		for buildtype in "${buildtypes[@]}"; do
-			if [[ $buildtype == "Debug" ]]; then
-				if [[ $backend =~ ompt|sycl ]]; then
-					printf '%s%s%s\n' \
-						"Backend=${backend^^} -> " \
-						"skipping build type \"Debug\" " \
-						"due to ptxas error in Debug builds with ${backend^^}"
-					continue
-				fi
-			fi
-			set_vars $backend $buildtype
-			if [[ $KOKKIDIO_SKIP_BACKEND == true ]]; then
+build_backend () {
+	for buildtype in "${buildtypes[@]}"; do
+		if [[ $buildtype == "Debug" ]]; then
+			if [[ $backend =~ ompt|sycl ]]; then
+				printf '%s%s%s\n' \
+					"Backend=${backend^^} -> " \
+					"skipping build type \"Debug\" " \
+					"due to ptxas error in Debug builds with ${backend^^}"
 				continue
 			fi
-			if [[ $buildKokkos == true ]]; then
-				build_kokkos $backend $buildtype
-			fi
-			if [[ $buildKokkidio == true ]]; then
-				check_kokkos_build $backend $buildtype
-				build_kokkidio $backend $buildtype
-			fi
-			if [[ $buildTests == true ]]; then
-				check_kokkos_build $backend $buildtype
-				for sc in float double; do
-					if ! [[ $whichScalar =~ all|$sc ]]; then
-						continue
-					fi
-					build_tests $backend $buildtype $sc
-				done
-			fi
-		done
-		echo "Finished compilation(s) for ${backend^^}."
-	else
-		echo "Skipping compilation(s) for ${backend^^}."
-	fi
+		fi
+		set_vars $buildtype
+		if [[ $buildKokkos == true ]]; then
+			build_kokkos $buildtype
+		fi
+		if [[ $buildKokkidio == true ]]; then
+			check_kokkos_build $buildtype
+			build_kokkidio $buildtype
+		fi
+		if [[ $buildTests == true ]]; then
+			check_kokkos_build $buildtype
+			for sc in float double; do
+				if ! [[ $whichScalar =~ all|$sc ]]; then
+					continue
+				fi
+				build_tests $buildtype $sc
+			done
+		fi
+	done
+	echo "Finished compilation(s) for ${backend^^}."
 }
 
-for b in cuda hip ompt sycl cpu_gcc; do
-	build_all $b
-done
+if [[ "$backend" == "all" ]]; then
+	for b in cuda hip ompt sycl cpu_gcc; do
+		backend="$b"
+		build_backend
+	done
+else
+	build_backend
+fi

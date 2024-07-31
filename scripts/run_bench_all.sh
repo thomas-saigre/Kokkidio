@@ -24,7 +24,8 @@ run_all () {
 		for p in "${np[@]}"; do
 			for scalar in float double; do
 				# for b in cuda hip ompt sycl; do
-				for b in cuda ompt sycl; do
+# 				for b in cuda ompt sycl; do
+				for b in cuda; do
 					"$runscr" \
 						--backend $b \
 						--scalar $scalar \
