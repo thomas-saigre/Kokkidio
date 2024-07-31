@@ -1,7 +1,9 @@
 #!/bin/bash
 
 keyfile="$HOME/.ssh/hlrn_ed25519"
-host=beitritt@glogin-gpu.hpc.gwdg.de
+user=beitritt
+# host=glogin-gpu.hpc.gwdg.de
+host=bgilogin.nhr.zib.de
 targetDir=kokkidio
 
 # Array of directories, files, and patterns to exclude
@@ -19,7 +21,7 @@ process_item() {
 	done
 
 	echo "Current item: $item"
-	scp -i "$keyfile" -r "$item" ${host}':~/'$targetDir
+	scp -i "$keyfile" -r "$item" ${user}@${host}':~/'$targetDir
 }
 
 for item in * .*; do
