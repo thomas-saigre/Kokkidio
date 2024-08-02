@@ -297,11 +297,31 @@ public:
 template<typename T>
 struct is_MapView : std::false_type {};
 
-template<typename PlainObjectType, Target targetArg>
-struct is_MapView<MapView<PlainObjectType, targetArg>> : std::true_type {};
+template<typename PlainObjectType, Target target>
+struct is_MapView<MapView<PlainObjectType, target>> : std::true_type {};
 
 template<typename T>
 inline constexpr bool is_MapView_v = is_MapView<T>::value;
+
+template<Target target = DefaultTarget, typename PlainObjectType>
+std::enable_if_t<
+	std::is_base_of_v<Eigen::DenseBase<PlainObjectType>, PlainObjectType>,
+	MapView<PlainObjectType, target>
+>
+mapView( PlainObjectType& eigenObj ){
+	return {eigenObj};
+}
+
+#define KOKKIDIO_MAPVIEW_FACTORY \
+template<typename PlainObjectType, Target target = DefaultTarget> \
+MapView<PlainObjectType, target> mapView
+
+KOKKIDIO_MAPVIEW_FACTORY(){ return {}; }
+KOKKIDIO_MAPVIEW_FACTORY(Index vectorSize){ return {vectorSize}; }
+KOKKIDIO_MAPVIEW_FACTORY(Index rows, Index cols){ return {rows, cols}; }
+
+
+#undef KOKKIDIO_MAPVIEW_FACTORY
 
 } // namespace Kokkidio
 
