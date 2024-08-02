@@ -53,7 +53,7 @@ struct is_eigen_map<Eigen::Map<PlainObjectType, mapOptions, StrideType>> :
 {};
 
 template<typename T>
-inline constexpr bool is_eigen_map_v = is_owning_eigen_type<T>::value;
+inline constexpr bool is_eigen_map_v = is_eigen_map<T>::value;
 
 
 
