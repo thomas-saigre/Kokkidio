@@ -1,5 +1,5 @@
 
-#include "bench/unifyBackends.hpp"
+#include "unifyBackends.hpp"
 #include "redux.hpp"
 #include "redux_cudahip_generic.hpp"
 

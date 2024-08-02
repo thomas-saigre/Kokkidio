@@ -1,5 +1,5 @@
 #include "dotProduct.hpp"
-#include "bench/unifyBackends.hpp"
+#include "unifyBackends.hpp"
 #include <cassert>
 
 namespace Kokkidio::gpu

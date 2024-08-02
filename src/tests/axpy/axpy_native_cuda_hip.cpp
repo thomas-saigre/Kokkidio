@@ -1,6 +1,6 @@
 #include "axpy.hpp"
 
-#include "bench/unifyBackends.hpp"
+#include "unifyBackends.hpp"
 
 namespace Kokkidio::gpu
 {

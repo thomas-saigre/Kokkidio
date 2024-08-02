@@ -5,8 +5,8 @@
 #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
 #endif
 
-#include "Kokkidio/EigenView.hpp"
-#include "Kokkidio/EigenDualView.hpp"
+#include "Kokkidio/MapView.hpp"
+#include "Kokkidio/DualMapView.hpp"
 #include "Kokkidio/ompSegment.hpp"
 #include "Kokkidio/typeHelpers.hpp"
 #include "Kokkidio/typeAliases.hpp"
@@ -74,10 +74,10 @@ KOKKIDIO_INL_AUTO eigenObj( T&& t ){
 	if constexpr (std::is_base_of_v<Eigen::DenseBase<U>, U>){
 		return t;
 	} else
-	if constexpr ( is_EigenView_v<U> ){
+	if constexpr ( is_MapView_v<U> ){
 		return t.map();
 	} else
-	if constexpr ( is_EigenDualView_v<U> ){
+	if constexpr ( is_DualMapView_v<U> ){
 		return t.map_target();
 	}
 }

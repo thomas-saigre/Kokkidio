@@ -1,5 +1,5 @@
 #include "redux.hpp"
-#include "bench/parseOpts.hpp"
+#include "parseOpts.hpp"
 
 
 namespace Kokkidio

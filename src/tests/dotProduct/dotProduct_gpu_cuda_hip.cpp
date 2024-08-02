@@ -2,7 +2,7 @@
 #include <cassert>
 
 #include "dotProduct.hpp"
-#include "bench/unifyBackends.hpp"
+#include "unifyBackends.hpp"
 
 namespace Kokkidio::gpu
 {

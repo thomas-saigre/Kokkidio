@@ -1,5 +1,5 @@
-#include "bench/runAndTime.hpp"
-#include "bench/parseOpts.hpp"
+#include "runAndTime.hpp"
+#include "parseOpts.hpp"
 
 #include "dotProduct.hpp"
 

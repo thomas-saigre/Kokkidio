@@ -130,7 +130,7 @@ void parallel_reduce( const Policy& pol, Func&& func, const Reducer& reducer ){
 	 * Error in cuMemcpyDtoHAsync: an illegal memory access was encountered
 	 * 
 	 * CUDA:
-	 * EigenView.hpp:255: auto Kokkidio::EigenView<_PlainObjectType, targetArg>::map() const
+	 * MapView.hpp:255: auto Kokkidio::MapView<_PlainObjectType, targetArg>::map() const
 	 * ->Eigen::Map<_PlainObjectType, 0, Eigen::Stride<0, 0>> 
 	 * [with _PlainObjectType = const Eigen::Matrix<float, -1, -1, 0, -1, -1>; 
 	 *  Kokkidio::Target targetArg = Kokkidio::Target::host]: 

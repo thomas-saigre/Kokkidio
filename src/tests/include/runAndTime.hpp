@@ -9,7 +9,7 @@
 #include <string_view>
 #include <regex>
 
-#include "bench/funcWrapper.hpp"
+#include "funcWrapper.hpp"
 #include "magic_enum.hpp"
 #include "Kokkidio/TargetEnum.hpp"
 

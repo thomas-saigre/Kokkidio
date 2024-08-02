@@ -1,6 +1,6 @@
 #include "dotProduct.hpp"
 
-#include "bench/unifyBackends.hpp"
+#include "unifyBackends.hpp"
 #include <Kokkidio.hpp>
 
 #include "magic_enum.hpp"

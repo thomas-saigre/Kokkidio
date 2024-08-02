@@ -1,5 +1,5 @@
-#ifndef KOKKIDIO_EIGENVIEW_HPP
-#define KOKKIDIO_EIGENVIEW_HPP
+#ifndef KOKKIDIO_MapView_HPP
+#define KOKKIDIO_MapView_HPP
 
 #ifndef KOKKIDIO_PUBLIC_HEADER
 #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
@@ -18,11 +18,11 @@ namespace Kokkidio
 {
 
 template<typename _PlainObjectType, Target targetArg = DefaultTarget>
-class EigenView {
+class MapView {
 public:
 	static constexpr Target target { ExecutionTarget<targetArg> };
 	using PlainObjectType_host = _PlainObjectType;
-	/* To make the EigenView work, the device view must be non-const in most 
+	/* To make the MapView work, the device view must be non-const in most 
 	 * cases, to not end up with inaccessible device memory.
 	 * However, if the target is the host, then a cast to non-const
 	 * could allow write access to a const object. 
@@ -33,7 +33,7 @@ public:
 		std::remove_const_t<PlainObjectType_host>
 	>;
 
-	using ThisType = EigenView<PlainObjectType_target, target>;
+	using ThisType = MapView<PlainObjectType_target, target>;
 	using MemorySpace    = Kokkidio::MemorySpace   <target>;
 	using ExecutionSpace = Kokkidio::ExecutionSpace<target>;
 private:
@@ -56,8 +56,8 @@ public:
 	 * the default constructor allocates memory,
 	 * while for dynamically sized Eigen objects, it does nothing,
 	 * like in Eigen itself. */
-	EigenView(){
-		/* EigenView(Index, Index) overwrites rows/cols 
+	MapView(){
+		/* MapView(Index, Index) overwrites rows/cols 
 		 * if they're known at compile time,
 		 * so we could pass any numbers. */
 		using P = PlainObjectType_host;
@@ -66,7 +66,7 @@ public:
 		}
 	}
 
-	EigenView(Index rows, Index cols){
+	MapView(Index rows, Index cols){
 		this->allocView(rows, cols);
 	}
 
@@ -74,16 +74,16 @@ public:
 	 * we allow a single size parameter, like in Eigen itself. */
 	template<typename P = PlainObjectType_host,
 		typename std::enable_if_t<P::IsVectorAtCompileTime, int> = 0>
-	EigenView(Index size) :
-		/* EigenView(Index, Index) overwrites rows/cols 
+	MapView(Index size) :
+		/* MapView(Index, Index) overwrites rows/cols 
 		 * if they're known at compile time,
 		 * so we could pass any numbers. */
-		EigenView(size, size)
+		MapView(size, size)
 	{
 		static_assert( std::is_same_v<P, PlainObjectType_host> );
 	}
 
-	EigenView( PlainObjectType_host& hostObj ){
+	MapView( PlainObjectType_host& hostObj ){
 		this->wrapOrAlloc(hostObj);
 	}
 
@@ -97,8 +97,8 @@ public:
 			!std::is_const_v<PlainObjectType_host> &&
 			!is_eigen_map_v<std::remove_const_t<PlainObjectType_host>>
 		){
-			/* If the EigenView was given a (non-const) object on construction,
-			 * then EigenView::resize should be the correct way to resize both,
+			/* If the MapView was given a (non-const) object on construction,
+			 * then MapView::resize should be the correct way to resize both,
 			 * because the Eigen object and Kokkos::View don't know about each 
 			 * other - i.e. there is no other non-manual way.
 			 */
@@ -237,13 +237,13 @@ public:
 
 	/**
 	 * @brief Returns an Eigen::Map
-	 * to memory on the EigenView's \a target 
+	 * to memory on the MapView's \a target 
 	 * (Target::host or Target::device).
 	 * 
-	 * This represents the core functionality of an EigenView,
+	 * This represents the core functionality of an MapView,
 	 * because this Eigen::Map can be used in any Eigen operation.
 	 * 
-	 * If the EigenView was initialised with an Eigen object \a obj and
+	 * If the MapView was initialised with an Eigen object \a obj and
 	 * \a target == Target::host, then the Eigen::Map uses the same data 
 	 * as that \a obj.
 	 * Otherwise, it uses data of a managed Kokkos::View.
@@ -263,7 +263,7 @@ public:
 
 	/**
 	 * @brief Returns the stored Kokkos::View. 
-	 * If the EigenView was initialised with an Eigen object \a obj,
+	 * If the MapView was initialised with an Eigen object \a obj,
 	 * this returns an unmanaged View with the same data pointer as \a obj.
 	 * Otherwise, it returns a managed view, whose memory space is
 	 * Kokkos::DefaultExecutionSpace, if \a target == Target::device, and
@@ -292,16 +292,16 @@ public:
 	}
 };
 
-// static_assert( std::is_trivially_copyable_v<EigenView<ArrayXXs, Target::device>> );
+// static_assert( std::is_trivially_copyable_v<MapView<ArrayXXs, Target::device>> );
 
 template<typename T>
-struct is_EigenView : std::false_type {};
+struct is_MapView : std::false_type {};
 
 template<typename PlainObjectType, Target targetArg>
-struct is_EigenView<EigenView<PlainObjectType, targetArg>> : std::true_type {};
+struct is_MapView<MapView<PlainObjectType, targetArg>> : std::true_type {};
 
 template<typename T>
-inline constexpr bool is_EigenView_v = is_EigenView<T>::value;
+inline constexpr bool is_MapView_v = is_MapView<T>::value;
 
 } // namespace Kokkidio
 

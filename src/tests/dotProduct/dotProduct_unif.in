@@ -36,9 +36,9 @@ scalar dotProduct(
 	if constexpr (k == K::eigen_colwise_merged || k == K::eigen_ranged_for_each_merged){
 		printd("running merged.\n");
 		/* Create matrix m12 to store both m1 and m2.
-		 * EigenDualView is used, so allocation is done automatically,
+		 * DualMapView is used, so allocation is done automatically,
 		 * but the copying of data has to be requested explicitly */
-		Kokkidio::EigenDualView<MatrixXs, target> m12 {2*nRows, nCols};
+		Kokkidio::DualMapView<MatrixXs, target> m12 {2*nRows, nCols};
 		/* Fill m12 with values of m1 and m2, m1 on top amd m2 on bottom */
 		m12.map_host() << m1, m2;
 		/* Copy data to device */
@@ -78,7 +78,7 @@ scalar dotProduct(
 		 * and then copies the Eigen object's data to the target -
 		 * if not explicitly told not to. 
 		 * If target == host, then the allocation and copy are skipped. */
-		Kokkidio::EigenDualView<const MatrixXs, target>
+		Kokkidio::DualMapView<const MatrixXs, target>
 			m1view {m1},
 			m2view {m2};
 
@@ -113,8 +113,8 @@ scalar dotProduct(
 		if constexpr (k == K::eigen_ranged){
 			printd("running unified-range-arrProd.\n");
 			auto func = KOKKOS_LAMBDA(ParallelRange<target> rng, scalar& sum){
-				/* Using EigenRange::operator() on an EigenView 
-				 * or EigenDualView calls its member function "map_target", 
+				/* Using EigenRange::operator() on an MapView 
+				 * or DualMapView calls its member function "map_target", 
 				 * as the intent is clear by that point,
 				 * before calling Kokkidio::autoRange on the map. */
 				sum += ( rng(m1view).array() * rng(m2view).array() ).sum();
@@ -124,7 +124,7 @@ scalar dotProduct(
 		if constexpr (k == K::eigen_ranged_chunks){
 			printd("running unified-range-arrProd.\n");
 			auto func = KOKKOS_LAMBDA(Kokkidio::Chunk<target> rng, scalar& sum){
-				/* Using ParallelRange::operator() on an EigenView or EigenDualView 
+				/* Using ParallelRange::operator() on an MapView or DualMapView 
 				 * calls its member function "map_target" for convenience. */
 				sum += ( rng(m1view).array() * rng(m2view).array() ).sum();
 			};

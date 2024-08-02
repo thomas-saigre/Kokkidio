@@ -1,11 +1,11 @@
-#ifndef KOKKIDIO_EIGENDUALVIEW_HPP
-#define KOKKIDIO_EIGENDUALVIEW_HPP
+#ifndef KOKKIDIO_DualMapView_HPP
+#define KOKKIDIO_DualMapView_HPP
 
 #ifndef KOKKIDIO_PUBLIC_HEADER
 #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
 #endif
 
-#include "Kokkidio/EigenView.hpp"
+#include "Kokkidio/MapView.hpp"
 
 namespace Kokkidio
 {
@@ -19,23 +19,23 @@ enum DualViewCopyOnInit {
 
 
 template<typename _PlainObjectType, Target targetArg = DefaultTarget>
-class EigenDualView {
+class DualMapView {
 public:
 	static constexpr Target target { ExecutionTarget<targetArg> };
 	using PlainObjectType_host = _PlainObjectType;
 
-	using ThisType = EigenDualView<PlainObjectType_host, target>;
-	using EigenView_host   = EigenView<PlainObjectType_host, Target::host>;
-	using EigenView_target = EigenView<PlainObjectType_host, target>;
-	using PlainObjectType_target = typename EigenView_target::PlainObjectType_target;
-	using Scalar = typename EigenView_target::Scalar;
+	using ThisType = DualMapView<PlainObjectType_host, target>;
+	using MapView_host   = MapView<PlainObjectType_host, Target::host>;
+	using MapView_target = MapView<PlainObjectType_host, target>;
+	using PlainObjectType_target = typename MapView_target::PlainObjectType_target;
+	using Scalar = typename MapView_target::Scalar;
 
-	using ViewType_host   = typename EigenView_host  ::ViewType;
-	using ViewType_target = typename EigenView_target::ViewType;
-	using ExecutionSpace_target = typename EigenView_target::ExecutionSpace;
+	using ViewType_host   = typename MapView_host  ::ViewType;
+	using ViewType_target = typename MapView_target::ViewType;
+	using ExecutionSpace_target = typename MapView_target::ExecutionSpace;
 
-	using MapType_host   = typename EigenView_host  ::MapType;
-	using MapType_target = typename EigenView_target::MapType;
+	using MapType_host   = typename MapView_host  ::MapType;
+	using MapType_target = typename MapView_target::MapType;
 
 	static_assert(
 		is_owning_eigen_type<std::remove_const_t<PlainObjectType_target>>::value ||
@@ -43,11 +43,11 @@ public:
 	);
 
 protected:
-	EigenView_host   m_host;
-	EigenView_target m_target;
+	MapView_host   m_host;
+	MapView_target m_target;
 
 public:
-	EigenDualView(
+	DualMapView(
 		PlainObjectType_host& hostObj,
 		DualViewCopyOnInit copyToTarget = CopyToTarget
 	) :
@@ -59,7 +59,7 @@ public:
 		}
 	}
 
-	EigenDualView(Index rows, Index cols)
+	DualMapView(Index rows, Index cols)
 	{
 		m_host = {rows, cols};
 		/* When target and host are identical, 
@@ -77,11 +77,11 @@ public:
 	 * we allow a single size parameter, like in Eigen itself. */
 	template<typename P = PlainObjectType_host,
 		typename std::enable_if_t<P::IsVectorAtCompileTime, int> = 0>
-	EigenDualView(Index size) :
-		/* EigenDualView(Index, Index) overwrites rows/cols 
+	DualMapView(Index size) :
+		/* DualMapView(Index, Index) overwrites rows/cols 
 		 * if they're known at compile time,
 		 * so we could pass any numbers. */
-		EigenDualView(size, size)
+		DualMapView(size, size)
 	{
 		static_assert( std::is_same_v<P, PlainObjectType_host> );
 	}
@@ -91,11 +91,11 @@ public:
 	 * like in Eigen itself. */
 	template<typename P = PlainObjectType_host,
 		typename std::enable_if_t<P::IsFixedSizeAtCompileTime, int> = 0>
-	EigenDualView() :
-		/* EigenDualView(Index, Index) overwrites rows/cols 
+	DualMapView() :
+		/* DualMapView(Index, Index) overwrites rows/cols 
 		 * if they're known at compile time,
 		 * so we could pass any numbers. */
-		EigenDualView(P::RowsAtCompileTime, P::ColsAtCompileTime)
+		DualMapView(P::RowsAtCompileTime, P::ColsAtCompileTime)
 	{
 		static_assert( std::is_same_v<P, PlainObjectType_host> );
 	}
@@ -103,7 +103,7 @@ public:
 	/* For dynamically sized Eigen types, the default constructor does nothing */
 	template<typename P = PlainObjectType_host,
 		typename std::enable_if_t<!P::IsFixedSizeAtCompileTime, int> = 0>
-	EigenDualView(){
+	DualMapView(){
 		static_assert( std::is_same_v<P, PlainObjectType_host> );
 	}
 
@@ -128,12 +128,12 @@ public:
 	}
 
 	KOKKOS_FUNCTION
-	auto get_host() const -> EigenView_host {
+	auto get_host() const -> MapView_host {
 		return this->m_host;
 	}
 
 	KOKKOS_FUNCTION
-	auto get_target() const -> EigenView_target {
+	auto get_target() const -> MapView_target {
 		return this->m_target;
 	}
 
@@ -177,7 +177,7 @@ public:
 				);
 			}
 		} else {
-			printd( "EigenDualView::copyToTarget, target==host, skipping...\n");
+			printd( "DualMapView::copyToTarget, target==host, skipping...\n");
 			assert( this->view_target().data() == this->view_host().data() );
 			assert( this-> map_target().data() == this-> map_host().data() );
 		}
@@ -201,7 +201,7 @@ public:
 				);
 			}
 		} else {
-			printd( "EigenDualView::copyToHost, target==host, skipping...\n");
+			printd( "DualMapView::copyToHost, target==host, skipping...\n");
 			assert( this->view_target().data() == this->view_host().data() );
 			assert( this-> map_target().data() == this-> map_host().data() );
 		}
@@ -209,7 +209,7 @@ public:
 };
 
 template<Target targetArg, typename PlainObjectType_host>
-EigenDualView<PlainObjectType_host, targetArg> make_EigenDualView(
+DualMapView<PlainObjectType_host, targetArg> make_DualMapView(
 	PlainObjectType_host& hostObj,
 	DualViewCopyOnInit copyToTarget = CopyToTarget
 ){
@@ -217,13 +217,13 @@ EigenDualView<PlainObjectType_host, targetArg> make_EigenDualView(
 }
 
 template<typename T>
-struct is_EigenDualView : std::false_type {};
+struct is_DualMapView : std::false_type {};
 
 template<typename PlainObjectType, Target targetArg>
-struct is_EigenDualView<EigenDualView<PlainObjectType, targetArg>> : std::true_type {};
+struct is_DualMapView<DualMapView<PlainObjectType, targetArg>> : std::true_type {};
 
 template<typename T>
-inline constexpr bool is_EigenDualView_v = is_EigenDualView<T>::value;
+inline constexpr bool is_DualMapView_v = is_DualMapView<T>::value;
 
 } // namespace Kokkidio
 

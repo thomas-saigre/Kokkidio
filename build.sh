@@ -233,7 +233,7 @@ build_tests () {
 	cmakeFlags+=" -DKokkidio_ROOT=$Kokkidio_ROOT"
 
 	echo "Running build commands..."
-	build_cmake "$builddir" "$sd/tests"
+	build_cmake "$builddir" "$sd/src/tests"
 
 
 	# if [[ $backend != "hip" ]]; then
@@ -264,6 +264,26 @@ build_tests () {
 	fi
 }
 
+build_examples () {
+	local buildtype=$1
+
+	make_title "Building examples with ${backend^^}, build type \"$buildtype\"."
+
+	export KOKKIDIO_REAL_SCALAR=float
+	builddir="_build/examples/$buildtype"
+
+	set_kokkos_targets
+	cmakeFlags+=" -DKokkos_ROOT=$Kokkos_ROOT"
+	cmakeFlags+=" -DKokkidio_ROOT=$Kokkidio_ROOT"
+
+	echo "Running build commands..."
+	build_cmake "$builddir" "$sd/src/examples"
+
+	echo "Finished compilation for ${backend^^}, build type \"$buildtype\"."
+	printf 'Executables can be found in \n%s' \
+		"${builddir}"
+}
+
 build_backend () {
 	for buildtype in "${buildtypes[@]}"; do
 		if [[ $buildtype == "Debug" ]]; then
@@ -291,6 +311,10 @@ build_backend () {
 				fi
 				build_tests $buildtype $sc
 			done
+		fi
+		if [[ $buildExamples == true ]]; then
+			check_kokkos_build $buildtype
+			build_examples $buildtype
 		fi
 	done
 	echo "Finished compilation(s) for ${backend^^}."

@@ -1,6 +1,6 @@
 #include "redux.hpp"
 #include "redux_cudahip_generic.hpp"
-#include "bench/unifyBackends.hpp"
+#include "unifyBackends.hpp"
 
 #include "magic_enum.hpp"
 

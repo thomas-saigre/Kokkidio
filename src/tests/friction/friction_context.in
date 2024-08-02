@@ -31,10 +31,10 @@ void friction(
 
 	Index nCols { flux_out.cols() };
 
-	Kokkidio::EigenDualView<ArrayXXs, target>
+	Kokkidio::DualMapView<ArrayXXs, target>
 		flux_out_view {flux_out, DontCopyToTarget};
 
-	Kokkidio::EigenDualView<const ArrayXXs, target>
+	Kokkidio::DualMapView<const ArrayXXs, target>
 		flux_in_view {flux_in},
 		d_view {d},
 		v_view {v},

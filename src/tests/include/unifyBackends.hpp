@@ -13,9 +13,9 @@
 
 
 #ifdef KOKKIDIO_USE_CUDAHIP
-#include "bench/unify_cuda_hip.hpp"
+#include "unify_cuda_hip.hpp"
 #elif defined(KOKKIDIO_USE_OMPT)
-#include "bench/unify_omptarget.hpp"
+#include "unify_omptarget.hpp"
 #endif
 
 #undef KOKKIDIO_UNIFYBACKENDS_PUBLIC_HEADER

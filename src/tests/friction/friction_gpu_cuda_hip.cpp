@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "friction.hpp"
-#include "bench/unifyBackends.hpp"
+#include "unifyBackends.hpp"
 
 namespace Kokkidio::gpu
 {

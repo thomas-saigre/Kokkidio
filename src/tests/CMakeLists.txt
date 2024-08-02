@@ -14,8 +14,8 @@ macro(set_warnings TARGET_NAME)
 endmacro()
 
 include_directories(
-	"${CMAKE_SOURCE_DIR}/../include"
-	"${CMAKE_SOURCE_DIR}/../lib"
+	"${CMAKE_SOURCE_DIR}/include"
+	"${CMAKE_SOURCE_DIR}/lib"
 )
 
 add_subdirectory(dotProduct)

@@ -4,9 +4,14 @@ echo -n "Synopsis:
   build.sh [options] [<subject>]
 
   <subject>             : Specifies what to build. Can be
-                          \"kokkidio\" (default), \"tests\", or \"kokkos\".
+                          \"kokkidio\" (default),
+                          \"examples\",
+                          \"tests\", or
+                          \"kokkos\".
   kokkidio              : Build Kokkidio. Requires Eigen and Kokkos to be 
                           available via CMake's find_package.
+  examples              : Build Kokkidio example executables. Requires Kokkidio
+                          to be built first.
   tests                 : Build the Kokkidio tests.
   kokkos                : Convenience option to let this script build Kokkos.
                           Requires setting the environment variable 
@@ -45,7 +50,7 @@ The default file for specifying machine-specific variables is:
 but this may be overriden in 
     <kokkidio>/env/node_patterns.sh
 When these variables are correctly configured, the following command builds all components:
-    ./build.sh -ic kokkos kokkidio tests
+    ./build.sh -ic kokkos kokkidio examples tests
 "
 }
 
@@ -157,6 +162,7 @@ fi
 
 buildKokkidio=false
 buildTests=false
+buildExamples=false
 buildKokkos=false
 
 for subj in "${subjects[@]}"; do
