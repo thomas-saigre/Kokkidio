@@ -85,17 +85,9 @@ to allow resizing both the `Kokkos::View` and the `Eigen` object
 via `MapView::resize()`.
 
 
-// [source,cpp]
-// ----
-// include::./src/examples/MapView.cpp[]
-// ----
-
-[source,cpp]
+[%collapsible,cpp]
 ----
-int nRows {10}, nCols {20};
-Eigen::ArrayXXd eigenArray {nRows, nCols};
-
-Kokkidio::MapView mv1 {eigenArray};
+include::./src/examples/MapView.cpp[]
 ----
 
 
