@@ -205,12 +205,8 @@ optkeys=()
 
 if [[ "$example" == "axpy" ]]; then
 	if [[ "$target" != "cpu" ]]; then
-		if [[ "$backend" =~ cuda|hip ]]; then
-			optkeys+=(
-				"GPU--native-cstyle"
-			)
-		fi
 		optkeys+=(
+			"GPU--native-cstyle"
 			"GPU--unified-cstyle"
 			"GPU--unified-kokkos"
 			"GPU--unified-kokkidio"

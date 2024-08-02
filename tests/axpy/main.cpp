@@ -69,15 +69,14 @@ void run_axpy(const BenchOpts b){
 			, uK::kokkidio
 		>( opts, pass, z, a, x, y, b.nRuns );
 
-		#ifdef KOKKIDIO_USE_CUDAHIP
 		using gK = gpu::Kernel;
 		opts.groupComment = "native";
 		opts.skipWarmup = true;
+		// opts.skipWarmup = false;
 		runAndTime<axpy_gpu, T::device, gK
-			, gK::cstyle // first one is for warmup
+			// , gK::cstyle
 			, gK::cstyle
 		>( opts, pass, z, a, x, y, b.nRuns );
-		#endif
 	}
 	#endif
 
@@ -95,9 +94,9 @@ void run_axpy(const BenchOpts b){
 		opts.groupComment = "native";
 		opts.skipWarmup = true;
 		runAndTime<axpy_cpu, T::host, cK
-			, cK::cstyle_parallel // first one is for warmup
-			, cK::cstyle_parallel
+			// , cK::cstyle_parallel // warmup is skipped
 			, cK::cstyle_sequential
+			, cK::cstyle_parallel
 			, cK::eigen_sequential
 			, cK::eigen_parallel
 		>( opts, pass, z, a, x, y, b.nRuns );

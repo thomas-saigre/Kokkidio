@@ -19,6 +19,12 @@ if (KOKKIDIO_USE_CUDA OR KOKKIDIO_USE_HIP)
 	)
 endif()
 
+if (KOKKIDIO_USE_SYCL)
+	target_sources( axpy PRIVATE
+		axpy_native_sycl.cpp
+	)
+endif()
+
 # if (KOKKIDIO_USE_OMPT)
 # 	target_sources( dotProduct PRIVATE 
 # 		dotProduct_gpu_ompt.cpp
