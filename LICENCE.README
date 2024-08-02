@@ -1,0 +1,6 @@
+Files in Kokkidio are licensed under the GNU General Public Licence version 3,
+the text of which can be found in LICENCE.
+
+Third-party libraries included with Kokkidio are licensed as follows:
+- Magic Enum C++: MIT Licence
+- CLI11: 3-Clause BSD licence
