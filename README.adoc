@@ -1,0 +1,187 @@
+// = Kokkidio Readme
+// :author: Lennart Steffen
+// :email: Lennart.Steffen@wahyd.tu-berlin.de
+:source-highlighter: highlight.js
+
+:Eigen: https://eigen.tuxfamily.org/[Eigen]
+:Kokkos: https://kokkos.org/[Kokkos]
+:GPLv3: https://www.gnu.org/licenses/gpl-3.0.en.html[GPLv3]
+:wahyd: https://www.wahyd.tu-berlin.de/
+
+:mapview: link:./include/Kokkidio/MapView.hpp[MapView]
+:dualmapview: link:./include/Kokkidio/DualMapView.hpp[DualMapView]
+:parallelrange: link:./include/Kokkidio/ParallelRange.hpp[ParallelRange]
+
+
+image::./media/Kokkidio_Logo.svg[]
+
+_Kokkidio_ is a header-only template library 
+designed to provide interoperability between the linear algebra library {Eigen} 
+and the performance portability framework {Kokkos}. 
+Its aim is to allow the easy-to-read, succinct source code of {Eigen} 
+to be compiled to fast machine code on all the platforms supported by {Kokkos}.  
+
+:toc:
+
+
+== Overview
+
+_Kokkidio_ consists of three interlocking elements:
+
+* The <<_data_structures, data structures>> `MapView` and `DualMapView`, 
+which combine an `Eigen::Map` and a `Kokkos::View`,
+* an iteration range class (`ParallelRange`), 
+which allows threads to efficiently access their assigned elements, and
+* parallel dispatch functions (`parallel_for` and `parallel_reduce`) 
+compatible with functors taking `ParallelRange`.
+
+
+== Data structures
+
+=== `MapView`
+
+The core of the `{mapview}` class 
+are the two member functions `map()` and `view()`,
+which return an `Eigen::Map`, and a `Kokkos::View` respectively, 
+and thus allow it to be used in either library's functions.
+
+`MapView` takes two template parameters:
+
+. `EigenType`: The `Eigen` class to be used as the map type, 
+e.g. `Eigen::MatrixXd` or `Eigen::Array3i`. 
+The return type of `map()` behaves the same way as this type. 
+Only dense types are currently supported. 
+. A `Target` enumeration value, which can be either `host` or `device`. 
+This parameter is optional. 
+Its default value matches `Kokkos::DefaultExecutionSpace`.
+
+`MapView` can be instantiated either using an existing `Eigen` object, 
+or using the same size parameters as you would for the `Eigen` type. 
+Here's what happens when you create a `MapView`:
+
+. With an existing `Eigen` object: 
+
+.. Instantiation on `Target::host`:
+No allocation is performed. 
+An unmanaged `Kokkos::View` is created, 
+using the existing object's data pointer and sizes.
+
+.. Instantiation on `Target::device`:
+the `Eigen` object's sizes are used to create a matching managed `Kokkos::View` 
+on the device.
+
+. With size parameters: 
+A managed `Kokkos::View` is created using these sizes on `Target`.
+The same size parameters are allowed as for the respective `Eigen` type.
+This means, creating vector types (1D) requires only a single size parameter,
+and fixed size types can be created without them.
+
+In all of the above cases, the data pointers of `view()` and `map()` 
+contain the same address. 
+Furthermore, when instantiating a `MapView` with 
+a non-const, owning `Eigen` object (i.e. not itself an `Eigen::Map`),
+a non-owning pointer to the object is stored 
+to allow resizing both the `Kokkos::View` and the `Eigen` object 
+via `MapView::resize()`.
+
+
+// [source,cpp]
+// ----
+// include::./src/examples/MapView.cpp[]
+// ----
+
+[source,cpp]
+----
+int nRows {10}, nCols {20};
+Eigen::ArrayXXd eigenArray {nRows, nCols};
+
+Kokkidio::MapView mv1 {eigenArray};
+----
+
+
+
+
+== Examples
+
+The [`MapView`] and [`DualMapView`] classes can be instantiated in a similar fashion to `Eigen` classes, 
+with similar behaviour:
+
+```c++
+using namespace Kokkidio;
+MapView<Eigen::MatrixXd>
+	a, // default construction, no allocation
+	b (2, 3); // constructs 
+```
+and [`DualMapView`] are designed to function  
+Here's an example using a `DualMapView`:
+
+```c++
+/* "Target" is an enum containing "host" and "device".
+ * Generally, you can just set it to "DefaultTarget",
+ * which queries Kokkos' default execution space. */
+constexpr target {DefaultTarget};
+using MatrixView = DualMapView<Eigen::MatrixXd, target>;
+int nRows {4}, nCols {1000};
+
+/* The DualMapView constructors which take sizes allocate memory 
+ * on both host and target: */
+MatrixView mat (nRows, nCols);
+
+/* The DualMapView constructors which take Eigen objects only allocate
+ * memory on the target, or none at all, if target==host: */
+Eigen::MatrixXd existingMat (nRows, nCols);
+MatrixView mat2 {existingMat};
+
+/* You can use Kokkos routines via the view_[host|target]() member functions, 
+ * e.g. for setting all elements to 123: */
+Kokkos::deep_copy(mat.view_host(), 123);
+
+/* or you can use Eigen routines via map_[host|target](): */
+mat.map_host().setRandom();
+
+/* Copy data to the target space (does nothing if target==host): */
+mat.copyToTarget();
+
+/* To operate on it, we create a functor, which is then passed to 
+ * a parallel dispatch function. Our functor here gets the sum of our data: */
+auto func = KOKKOS_LAMBDA(ParallelRange<target> rng, double& sum){
+	/* pass an Eigen(Dual)View or Eigen object to a ParallelRange
+	 * to get the elements associated with a thread (Eigen::Block) */
+	sum += rng(mat);
+}
+
+double result {0};
+/* parallel_[for|reduce] in the Kokkidio namespace allow passing functions 
+ * which take a ParallelRange, but otherwise they work exactly like
+ * Kokkos::parallel_[for|reduce]: */
+parallel_reduce<DefaultTarget>( nCols, func, redux::sum(result) );
+```
+
+== Licence
+
+_Kokkidio_ is maintained by the
+Chair of Water Resources Management and Modelling of Hydrosystems of the
+Technische Universität Berlin,
+or *wahyd* for short ({wahyd}[Link]).
+It is distributed under a {gplv3} (link:./LICENCE[Licence text]).
+Licence types for the libraries used in _Kokkidio_
+are listed in the link:./LICENCE.README[LICENCE.README] file.
+
+== Name and Logo
+
+The name _Kokkidio_ is based on the assumptions that 
+
+. {Kokkos} refers to the Greek *Κόκκος* (engl.: *grain*, though possibly a play on *kernel*), and that 
+. {Eigen} refers to eigenvalues and eigenvectors.
+
+The latter are _ιδιοτιμή_ (idiotimí) and _ιδιοδιάνυσμα_ (idiodiánysma) in Greek, 
+from which the prefix _ιδιο_ (idio) was taken
+(engl.: _same_, though it could also be from _ίδιος_ = own, or self, 
+which is the meaning of _eigen_ in German). 
+_κοκκίδιο_ (kokkídio) could be seen as a https://en.wikipedia.org/wiki/Portmanteau[portmanteau] of _Kokkos_ and _idio_, 
+but is in fact the Greek word for _granule_, so not far off _Kokkos_ itself.
+
+The logo is a stretched/sheared map of a recolouration of the https://kokkos.org/img/kokkos-logo.png[Kokkos logo], 
+with the eigenvectors of that mapping drawn as arrows.
+
+
