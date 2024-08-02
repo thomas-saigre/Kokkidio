@@ -280,7 +280,7 @@ build_examples () {
 	build_cmake "$builddir" "$sd/src/examples"
 
 	echo "Finished compilation for ${backend^^}, build type \"$buildtype\"."
-	printf 'Executables can be found in \n%s' \
+	printf 'Executables can be found in \n\t%s\n' \
 		"${builddir}"
 }
 

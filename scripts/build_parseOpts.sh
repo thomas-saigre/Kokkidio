@@ -170,6 +170,9 @@ for subj in "${subjects[@]}"; do
 		"kokkidio")
 			buildKokkidio=true
 			;;
+		"examples")
+			buildExamples=true
+			;;
 		"tests")
 			buildTests=true
 			;;
