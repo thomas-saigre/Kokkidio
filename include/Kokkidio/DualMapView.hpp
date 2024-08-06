@@ -18,16 +18,16 @@ enum DualViewCopyOnInit {
 };
 
 
-template<typename _PlainObjectType, Target targetArg = DefaultTarget>
+template<typename _EigenType, Target targetArg = DefaultTarget>
 class DualMapView {
 public:
 	static constexpr Target target { ExecutionTarget<targetArg> };
-	using PlainObjectType_host = _PlainObjectType;
+	using EigenType_host = _EigenType;
 
-	using ThisType = DualMapView<PlainObjectType_host, target>;
-	using MapView_host   = MapView<PlainObjectType_host, Target::host>;
-	using MapView_target = MapView<PlainObjectType_host, target>;
-	using PlainObjectType_target = typename MapView_target::PlainObjectType_target;
+	using ThisType = DualMapView<EigenType_host, target>;
+	using MapView_host   = MapView<EigenType_host, Target::host>;
+	using MapView_target = MapView<EigenType_host, target>;
+	using EigenType_target = typename MapView_target::EigenType_target;
 	using Scalar = typename MapView_target::Scalar;
 
 	using ViewType_host   = typename MapView_host  ::ViewType;
@@ -38,8 +38,8 @@ public:
 	using MapType_target = typename MapView_target::MapType;
 
 	static_assert(
-		is_owning_eigen_type<std::remove_const_t<PlainObjectType_target>>::value ||
-		is_eigen_map        <std::remove_const_t<PlainObjectType_target>>::value
+		is_owning_eigen_type<std::remove_const_t<EigenType_target>>::value ||
+		is_eigen_map        <std::remove_const_t<EigenType_target>>::value
 	);
 
 protected:
@@ -48,7 +48,7 @@ protected:
 
 public:
 	DualMapView(
-		PlainObjectType_host& hostObj,
+		EigenType_host& hostObj,
 		DualViewCopyOnInit copyToTarget = CopyToTarget
 	) :
 		m_host  (hostObj),
@@ -75,7 +75,7 @@ public:
 
 	/* For Eigen vector types,
 	 * we allow a single size parameter, like in Eigen itself. */
-	template<typename P = PlainObjectType_host,
+	template<typename P = EigenType_host,
 		typename std::enable_if_t<P::IsVectorAtCompileTime, int> = 0>
 	DualMapView(Index size) :
 		/* DualMapView(Index, Index) overwrites rows/cols 
@@ -83,13 +83,13 @@ public:
 		 * so we could pass any numbers. */
 		DualMapView(size, size)
 	{
-		static_assert( std::is_same_v<P, PlainObjectType_host> );
+		static_assert( std::is_same_v<P, EigenType_host> );
 	}
 
 	/* For fixed size Eigen types,
 	 * the default constructor allocates memory,
 	 * like in Eigen itself. */
-	template<typename P = PlainObjectType_host,
+	template<typename P = EigenType_host,
 		typename std::enable_if_t<P::IsFixedSizeAtCompileTime, int> = 0>
 	DualMapView() :
 		/* DualMapView(Index, Index) overwrites rows/cols 
@@ -97,17 +97,17 @@ public:
 		 * so we could pass any numbers. */
 		DualMapView(P::RowsAtCompileTime, P::ColsAtCompileTime)
 	{
-		static_assert( std::is_same_v<P, PlainObjectType_host> );
+		static_assert( std::is_same_v<P, EigenType_host> );
 	}
 
 	/* For dynamically sized Eigen types, the default constructor does nothing */
-	template<typename P = PlainObjectType_host,
+	template<typename P = EigenType_host,
 		typename std::enable_if_t<!P::IsFixedSizeAtCompileTime, int> = 0>
 	DualMapView(){
-		static_assert( std::is_same_v<P, PlainObjectType_host> );
+		static_assert( std::is_same_v<P, EigenType_host> );
 	}
 
-	void assign( PlainObjectType_host& hostObj ){
+	void assign( EigenType_host& hostObj ){
 		this->m_host   = {hostObj};
 		this->m_target = {hostObj};
 	}
@@ -208,9 +208,9 @@ public:
 	}
 };
 
-template<Target targetArg, typename PlainObjectType_host>
-DualMapView<PlainObjectType_host, targetArg> make_DualMapView(
-	PlainObjectType_host& hostObj,
+template<Target targetArg, typename EigenType_host>
+DualMapView<EigenType_host, targetArg> make_DualMapView(
+	EigenType_host& hostObj,
 	DualViewCopyOnInit copyToTarget = CopyToTarget
 ){
 	return {hostObj, copyToTarget};
@@ -219,8 +219,8 @@ DualMapView<PlainObjectType_host, targetArg> make_DualMapView(
 template<typename T>
 struct is_DualMapView : std::false_type {};
 
-template<typename PlainObjectType, Target targetArg>
-struct is_DualMapView<DualMapView<PlainObjectType, targetArg>> : std::true_type {};
+template<typename EigenType, Target targetArg>
+struct is_DualMapView<DualMapView<EigenType, targetArg>> : std::true_type {};
 
 template<typename T>
 inline constexpr bool is_DualMapView_v = is_DualMapView<T>::value;
