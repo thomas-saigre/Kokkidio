@@ -137,6 +137,19 @@ public:
 		return this->m_target;
 	}
 
+	template<Target _target>
+	KOKKOS_FUNCTION
+	auto get() const -> 
+		std::conditional<_target == target, MapView_target, MapView_host>
+	{
+		if constexpr (_target == target){
+			return this->get_target();
+		} else {
+			static_assert(_target == Target::host);
+			return this->get_host();
+		}
+	}
+
 	KOKKOS_FUNCTION
 	auto view_host() const -> ViewType_host {
 		assert( this->isAlloc_host() );
@@ -150,6 +163,25 @@ public:
 	}
 
 	KOKKOS_FUNCTION
+	auto view() const -> ViewType_target {
+		assert( this->isAlloc_target() );
+		return this->view_target();
+	}
+
+	template<Target _target>
+	KOKKOS_FUNCTION
+	auto view() const -> 
+		std::conditional<_target == target, ViewType_target, ViewType_host>
+	{
+		if constexpr (_target == target){
+			return this->view_target();
+		} else {
+			static_assert(_target == Target::host);
+			return this->view_host();
+		}
+	}
+
+	KOKKOS_FUNCTION
 	auto map_host() const -> MapType_host {
 		return this->m_host.map();
 	}
@@ -157,6 +189,24 @@ public:
 	KOKKOS_FUNCTION
 	auto map_target() const -> MapType_target {
 		return this->m_target.map();
+	}
+
+	KOKKOS_FUNCTION
+	auto map() const -> MapType_target {
+		return this->map_target();
+	}
+
+	template<Target _target>
+	KOKKOS_FUNCTION
+	auto map() const -> 
+		std::conditional<_target == target, MapType_target, MapType_host>
+	{
+		if constexpr (_target == target){
+			return this->map_target();
+		} else {
+			static_assert(_target == Target::host);
+			return this->map_host();
+		}
 	}
 
 	void copyToTarget(bool async = false){
