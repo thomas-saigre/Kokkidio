@@ -30,13 +30,56 @@ toc::[]
 
 _Kokkidio_ consists of three interlocking elements:
 
-* The <<_data_structures, data structures>> `MapView` and `DualMapView`, 
-which combine an `Eigen::Map` and a `Kokkos::View`,
-* an iteration range class (`ParallelRange`), 
-which allows threads to efficiently access their assigned elements, and
+* An iteration range class (`ParallelRange`), 
+which allows threads to efficiently access their assigned elements, 
 * parallel dispatch functions (`parallel_for` and `parallel_reduce`) 
-compatible with functors taking `ParallelRange`.
+compatible with functors taking `ParallelRange`, and
+* the <<_data_structures, data structures>> `MapView` and `DualMapView`, 
+which combine an `Eigen::Map` and a `Kokkos::View`,
 
+== Why Kokkos?
+
+{Kokkos} is a portability and parallelism framework, 
+which allows users to write code that compiles and runs 
+on a wide range of hardware, especially both CPUs and GPUs.
+It may be viewed as providing a common abstraction 
+for various programming models and backends, e.g.
+OpenMP, including target offloading, OpenACC, CUDA, HIP, and SYCL.
+
+While modern compilers already allow targeting multiple CPU architectures,
+due to ISAs functioning as a reliable standard (x86(-64), ARM, ...),
+GPU architectures and programming models are much less intercompatible.
+If you wrote your code using CUDA, 
+but want to run it on an Intel PonteVecchio GPU, 
+you will have to rewrite large parts of it.
+
+Using {Kokkos} for new projects allows you to avoid that type of effort.
+For existing projects, it allows a step-by-step migration, 
+because backend-specific code will still compile 
+when using Kokkos on top of that backend.
+
+// GPU architectures don't just vary between vendors, 
+// but often also between product generations and product lines of a single vendor.
+// // e.g. GCN being superseded by RDNA and CDNA, 
+// // or <NVIDIA>
+
+
+// Therefore, expressing a programming task 
+// through Kokkos' data structures and parallel dispatch functions
+// allows it to be run on basically any hardware
+
+== Why Eigen?
+
+{Eigen} is a linear algebra library, 
+which allows writing any such operations in a readable, succinct manner,
+while compiling to highly optimised machine code.
+// This is enabled by the use of expression templates, 
+// which can delay 
+
+== Parallel dispatch and the `ParallelRange` class
+
+The user-facing side of {Kokkos}' parallel dispatch is very similar to a `for`-loop,
+as you provide a range and an iteration variable. To illustrate
 
 == Data structures
 
@@ -91,7 +134,7 @@ via `MapView::resize()`.
 The examples below are taken from
 link:./src/examples/MapView.cpp[examples/MapView.cpp].
 
-.Expand examples for instantiating a MapView
+.Expand MapView examples
 [%collapsible]
 ====
 [,cpp]
@@ -121,12 +164,29 @@ MapView<Eigen::ArrayXd> mv5 {nRows};
 
 /* Array3d is a fixed size type, so no parameters are required */
 MapView<Eigen::Array3d> mv6;
+
+/* set values on host, using Eigen's assignment operator on MapView::map() */
+mv1.map() = 1;
+
+/* set values on target, using Kokkos::deep_copy with MapView::view() */
+Kokkos::deep_copy(mv2.view(), 2);
+
+/* set values on target with parallel dispatch: */
+/* with Kokkidio::ParallelRange */
+parallel_for( mv3.cols(), KOKKOS_LAMBDA(ParallelRange<> rng){
+	rng(mv3) = 3;
+});
+
+/* or just an integer, using the standard Kokkos-style */
+parallel_for( mv4.size(), KOKKOS_LAMBDA(int i){
+	mv4.data()[i] = 4;
+});
 ----
 ====
 
 ==== Synopsis
 
-.Expand synopsis of DualMapView
+.Expand synopsis of MapView
 [%collapsible]
 ====
 [,cpp]
@@ -159,14 +219,10 @@ public:
 	using ViewType   = Kokkos::View<..., Kokkos::LayoutLeft, MemorySpace>;
 	using HostMirror = typename ViewType::HostMirror;
 
-protected:
-	ViewType m_view;
-	observer_ptr<EigenType_host> m_obj {nullptr};
-
 public:
 
 	/* constructors */
-	MapView(); // default (no allocation) or fixed size types
+	MapView(); // default, allocation only for fixed size types
 	MapView(Index size); // 1D types
 	MapView(Index rows, Index cols); // 2D types
 	MapView( _EigenType& hostObj ); // existing Eigen objects
@@ -250,6 +306,166 @@ in the form of
 Similar to <<_mapview,`MapView`>>, it also allows to `resize()` its data,
 and does so on both `host` and the specified `Target`.
 
+==== Examples
+
+The examples below are taken from
+link:./src/examples/DualMapView.cpp[examples/DualMapView.cpp].
+
+.Expand DualMapView examples
+[%collapsible]
+====
+[,cpp]
+----
+using namespace Kokkidio;
+int nRows {10}, nCols {20};
+
+/* existing Eigen object */
+Eigen::ArrayXXd eigenArray {nRows, nCols};
+/* By default, when initialising with an Eigen object,
+ * the object's data is copied to the target. 
+ * This behaviour be changed with an optional parameter: DontCopyToTarget */
+DualMapView d1 {eigenArray};
+auto d2 = dualMapView(eigenArray, DontCopyToTarget);
+/* Otherwise, a DualMapView can be created in exactly the same ways as a 
+ * MapView, so please refer to MapView.cpp for more examples. */
+
+/* with DualMapView, you can set your values on host, 
+ * then copy them to the target: */
+d2.map_host() = 123;
+d2.copyToTarget();
+
+auto print = [&](std::string_view descriptor){
+	std::cout
+		<< "d2, values on host, " << descriptor << ":\n"
+		<< d2.map_host() << '\n';
+};
+print("before");
+
+/* Now you can do some computations on the target, 
+ * then copy the values back */
+parallel_for(d2.cols(), KOKKOS_LAMBDA(ParallelRange<> rng){
+	rng(d2) += 1;
+});
+d2.copyToHost();
+
+print("after");
+----
+====
+
+==== Synopsis
+
+.Expand synopsis of DualMapView
+[%collapsible]
+====
+[,cpp]
+----
+
+template<typename _EigenType, Target targetArg = DefaultTarget>
+class DualMapView {
+public:
+	static constexpr Target target { ExecutionTarget<targetArg> };
+	using EigenType_host = _EigenType;
+
+	using ThisType = DualMapView<EigenType_host, target>;
+	using MapView_host   = MapView<EigenType_host, Target::host>;
+	using MapView_target = MapView<EigenType_host, target>;
+	using EigenType_target = typename MapView_target::EigenType_target;
+	using Scalar = typename MapView_target::Scalar;
+
+	using ViewType_host   = typename MapView_host  ::ViewType;
+	using ViewType_target = typename MapView_target::ViewType;
+	using ExecutionSpace_target = typename MapView_target::ExecutionSpace;
+
+	using MapType_host   = typename MapView_host  ::MapType;
+	using MapType_target = typename MapView_target::MapType;
+
+public:
+
+	/* constructors */
+	DualMapView(); // default, allocation only for fixed size types
+	DualMapView(Index size); // 1D types
+	DualMapView(Index rows, Index cols); // 2D types
+	DualMapView(
+		EigenType_host& hostObj,
+		DualViewCopyOnInit copyToTarget = CopyToTarget
+	);  // existing Eigen objects
+
+
+	/* "assign", "resize" and constructors can only be called from host */
+	void assign( EigenType_host& hostObj );
+	void resize(Index rows, Index cols);
+
+	/* get some info about type and status */
+	KOKKOS_FUNCTION bool isAlloc_host() const;
+	KOKKOS_FUNCTION bool isAlloc_target() const;
+
+	/* get MapViews */
+	KOKKOS_FUNCTION MapView_host   get_host  () const;
+	KOKKOS_FUNCTION MapView_target get_target() const;
+
+	template<Target _target>
+	KOKKOS_FUNCTION auto get() const
+		-> std::conditional<_target == target, MapView_target, MapView_host>;
+
+	/* get Kokkos::Views */
+	KOKKOS_FUNCTION ViewType_host   view_host  () const;
+	KOKKOS_FUNCTION ViewType_target view_target() const;
+
+	template<Target _target>
+	KOKKOS_FUNCTION auto view() const
+		-> std::conditional<_target == target, ViewType_target, ViewType_host>;
+
+	/* shortcut to view_target */
+	KOKKOS_FUNCTION ViewType_target view() const;
+
+	/* get Eigen::Maps */
+	KOKKOS_FUNCTION MapType_host   map_host  () const;
+	KOKKOS_FUNCTION MapType_target map_target() const;
+
+	template<Target _target>
+	KOKKOS_FUNCTION auto map() const
+		-> std::conditional<_target == target, MapType_target, MapType_host>;
+
+	/* shortcut to map_target */
+	KOKKOS_FUNCTION MapType_target map() const;
+
+	/* sizes */
+	KOKKOS_FUNCTION Index rows() const;
+	KOKKOS_FUNCTION Index cols() const;
+	KOKKOS_FUNCTION Index size() const;
+
+	/* copy */
+	void copyToTarget(bool async = false);
+	void copyToHost(bool async = false);
+};
+
+/* detection */
+template<typename T>
+inline constexpr bool is_DualMapView_v = ...;
+
+
+/* factory functions */
+
+/* specify target, deduce EigenType */
+template<Target target = DefaultTarget, typename EigenType>
+DualMapView<EigenType, target> dualMapView(
+	EigenType& eigenObj,
+	DualViewCopyOnInit copyToTarget = CopyToTarget
+);
+
+/* specify EigenType, optionally specify target, fixed size */
+template<typename EigenType, Target target = DefaultTarget>
+DualMapView<EigenType, target> dualMapView();
+dualMapViewk
+/* specify EigenType, optionally specify target, 1D */
+template<typename EigenType, Target target = DefaultTarget>
+DualMapView<EigenType, target> dualMapView(Index vectorSize);
+
+/* specify EigenType, optionally specify target, 2D */
+template<typename EigenType, Target target = DefaultTarget>
+DualMapView<EigenType, target> dualMapView(Index rows, Index cols);
+----
+====
 
 == Examples
 
