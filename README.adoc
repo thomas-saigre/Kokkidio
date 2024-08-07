@@ -42,7 +42,13 @@ which combine an `Eigen::Map` and a `Kokkos::View`,
 {Kokkos} is a portability and parallelism framework, 
 which allows users to write code that compiles and runs 
 on a wide range of hardware, especially both CPUs and GPUs.
-It may be viewed as providing a common abstraction 
+It provides data structures
+(https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/View.html[`Kokkos::View`]),
+as well as functions for 
+https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/ParallelDispatch.html[parallel dispatch],
+and
+// It 
+may be viewed as a common abstraction 
 for various programming models and backends, e.g.
 OpenMP, including target offloading, OpenACC, CUDA, HIP, and SYCL.
 
@@ -73,13 +79,77 @@ when using Kokkos on top of that backend.
 {Eigen} is a linear algebra library, 
 which allows writing any such operations in a readable, succinct manner,
 while compiling to highly optimised machine code.
-// This is enabled by the use of expression templates, 
-// which can delay 
+Instead of implementing matrix, vector, or coefficient-wise operations 
+using loops, the 'Eigen way' is to operate on whole data structures 
+using their overloaded operators or member functions. Here's an example:
+
+.Dot product in pure C++
+[%collapsible]
+====
+[,cpp]
+----
+std::size_t size {10};
+std::vector<double> a {size}, b {size};
+/* fill vectors in some way ... */
+/* then loop over them and track the sum */
+double sum {0};
+for (std::size_t i=0; i<size; ++i){
+	sum += a * b;
+}
+----
+====
+
+.Dot product in Eigen
+[%collapsible]
+====
+[,cpp]
+----
+Eigen::Index size {10};
+Eigen::VectorXd a {size}, b {size};
+/* fill vectors in some way ... */
+double sum = a.dot(b);
+----
+====
+
+In addition to the benefits of letting a well-tested library handle common operations,
+Eigen also performs extensive optimisations on the underlying loops.
+This notably includes explicit vectorisation for all common CPU vector extensions, 
+such as the SSE and AVX families on x86, ARM NEON, and others.
+// mention expression templates?
+
+Since version 3.4, Eigen functions can be called from CUDA/HIP kernels,
+and its compatibility with SYCL is in a usable state since at least early 2024
+and under active development.
+However, neither its allocators for dynamically-sized data structures, 
+nor SIMD parallelism (like vectorisation on CPUs) 
+are currently available on GPUs.
+It does provide the 
+https://eigen.tuxfamily.org/dox/classEigen_1_1Map.html[`Eigen::Map`] class, though, 
+with which other data structures can be treated like an Eigen object,
+if they expose a data pointer and their memory layout and stride(s) are known.
+
 
 == Parallel dispatch and the `ParallelRange` class
 
-The user-facing side of {Kokkos}' parallel dispatch is very similar to a `for`-loop,
-as you provide a range and an iteration variable. To illustrate
+Using Kokkos' 
+https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/ParallelDispatch.html[parallel dispatch]
+is similar to a `for`-loop,
+in the sense that users provide a range and an iteration variable. 
+Here's an example:
+
+.Kokkos parallel dispatch
+[%collapsible]
+====
+[,cpp]
+----
+std::size_t size {10} // that's our range
+Kokkos::parallel_for( size, KOKKOS_LAMBDA(int i){ // i is our iteration variable
+	// each value for i now goes to a single thread
+} );
+----
+====
+
+
 
 == Data structures
 
