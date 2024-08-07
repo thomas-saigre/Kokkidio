@@ -9,17 +9,23 @@ message(STATUS "Using CXX compiler: ${CMAKE_CXX_COMPILER}")
 
 macro(set_warnings TARGET_NAME)
 	target_compile_options( ${TARGET_NAME} PRIVATE
-	-Wall -Wextra -Wno-deprecated-declarations
+		-Wall -Wextra -Wno-deprecated-declarations
 	)
 endmacro()
 
+macro(configure TARGET_NAME)
+	set_warnings(${TARGET_NAME})
+	kokkidio_configure_target(${TARGET_NAME})
+endmacro()
+
 include_directories(
-	"${CMAKE_SOURCE_DIR}/../include"
-	"${CMAKE_SOURCE_DIR}/../lib"
+	"${CMAKE_SOURCE_DIR}/../../lib"
 )
 
 add_executable(mapview MapView.cpp)
 
-set_warnings(mapview)
+configure(mapview)
 
-kokkidio_configure_target(mapview)
+add_executable(dualmapview DualMapView.cpp)
+
+configure(dualmapview)
