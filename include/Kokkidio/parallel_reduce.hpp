@@ -116,7 +116,7 @@ void reduce_host( const Policy& pol, Func&& func, const Reducer& reducer ){
  * @param reducer Use the factory functions in Kokkidio::redux
  * with the result variable as its argument, e.g. redux::sum(yourResultVar).
  */
-template<Target target, typename Policy, typename Func, typename Reducer>
+template<Target target = DefaultTarget, typename Policy, typename Func, typename Reducer>
 // KOKKIDIO_INLINE 
 void parallel_reduce( const Policy& pol, Func&& func, const Reducer& reducer ){
 
@@ -158,7 +158,7 @@ void parallel_reduce( const Policy& pol, Func&& func, const Reducer& reducer ){
 	}
 }
 
-template<Target target, typename Policy, typename Func, typename Reducer>
+template<Target target = DefaultTarget, typename Policy, typename Func, typename Reducer>
 // KOKKIDIO_INLINE 
 void parallel_reduce_chunks(const Policy& pol, Func&& func, const Reducer& reducer){
 

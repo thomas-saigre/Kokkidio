@@ -53,7 +53,7 @@ void parallel_for( const Policy& pol, Func&& func ){
 } // namespace detail
 
 
-template<Target target, typename Policy, typename Func>
+template<Target target = DefaultTarget, typename Policy, typename Func>
 void parallel_for_range(
 	const Policy& pol,
 	Func&& func
@@ -94,7 +94,7 @@ void parallel_for_range(
 }
 
 
-template<Target target, typename Policy, typename Func>
+template<Target target = DefaultTarget, typename Policy, typename Func>
 void parallel_for( const Policy& pol, Func&& func ){
 	if constexpr ( detail::is_range_invocable<Func> ){
 		parallel_for_range<target>( pol, std::forward<Func>(func) );
@@ -103,7 +103,7 @@ void parallel_for( const Policy& pol, Func&& func ){
 	}
 }
 
-template<Target target, typename Policy, typename Func>
+template<Target target = DefaultTarget, typename Policy, typename Func>
 // KOKKIDIO_INLINE 
 void parallel_for_chunks(const Policy& pol, Func&& func){
 

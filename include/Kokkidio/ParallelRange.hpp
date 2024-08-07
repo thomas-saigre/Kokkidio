@@ -14,7 +14,7 @@ namespace Kokkidio
 {
 
 
-template<Target _target = Target::host>
+template<Target _target = DefaultTarget>
 class ParallelRange : public EigenRange<_target> {
 public:
 	static constexpr Target target {_target};
