@@ -224,14 +224,14 @@ public:
 		return this->m_view.is_allocated();
 	}
 
-	KOKKOS_FUNCTION
-	Scalar* data() {
-		assert( this->isAlloc() );
-		return this->m_view.data();
-	}
+	// KOKKOS_FUNCTION
+	// Scalar* data() {
+	// 	assert( this->isAlloc() );
+	// 	return this->m_view.data();
+	// }
 
 	KOKKOS_FUNCTION
-	std::add_const_t<Scalar>* data() const {
+	decltype(auto) data() const {
 		assert( this->isAlloc() );
 		return this->m_view.data();
 	}
