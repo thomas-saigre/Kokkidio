@@ -90,15 +90,13 @@ public:
 
 	/* For Eigen vector types,
 	 * we allow a single size parameter, like in Eigen itself. */
-	template<typename P = EigenType_host,
-		typename std::enable_if_t<P::IsVectorAtCompileTime, int> = 0>
 	DualMapView(Index size) :
 		/* DualMapView(Index, Index) overwrites rows/cols 
 		 * if they're known at compile time,
 		 * so we could pass any numbers. */
 		DualMapView(size, size)
 	{
-		static_assert( std::is_same_v<P, EigenType_host> );
+		static_assert(EigenType_host::IsVectorAtCompileTime);
 	}
 
 	void assign( EigenType_host& hostObj ){
@@ -158,7 +156,6 @@ public:
 
 	KOKKOS_FUNCTION
 	auto view() const -> ViewType_target {
-		assert( this->isAlloc_target() );
 		return this->view_target();
 	}
 
@@ -201,6 +198,21 @@ public:
 			static_assert(_target == Target::host);
 			return this->map_host();
 		}
+	}
+
+	KOKKOS_FUNCTION
+	Index rows() const {
+		return static_cast<Index>( this->view().extent(0) );
+	}
+
+	KOKKOS_FUNCTION
+	Index cols() const {
+		return static_cast<Index>( this->view().extent(1) );
+	}
+
+	KOKKOS_FUNCTION
+	Index size() const {
+		return static_cast<Index>( this->view().size() );
 	}
 
 	void copyToTarget(bool async = false){
@@ -251,14 +263,6 @@ public:
 		}
 	}
 };
-
-template<Target targetArg, typename EigenType_host>
-DualMapView<EigenType_host, targetArg> make_DualMapView(
-	EigenType_host& hostObj,
-	DualViewCopyOnInit copyToTarget = CopyToTarget
-){
-	return {hostObj, copyToTarget};
-}
 
 template<typename T>
 struct is_DualMapView : std::false_type {};
