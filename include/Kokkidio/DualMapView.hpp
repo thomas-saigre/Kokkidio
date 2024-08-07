@@ -46,21 +46,7 @@ protected:
 	MapView_host   m_host;
 	MapView_target m_target;
 
-public:
-	DualMapView(
-		EigenType_host& hostObj,
-		DualViewCopyOnInit copyToTarget = CopyToTarget
-	) :
-		m_host  (hostObj),
-		m_target(hostObj)
-	{
-		if ( copyToTarget ){
-			this->copyToTarget();
-		}
-	}
-
-	DualMapView(Index rows, Index cols)
-	{
+	void set(Index rows, Index cols){
 		m_host = {rows, cols};
 		/* When target and host are identical, 
 		 * then we can copy-initialise the target View with the host View
@@ -73,6 +59,35 @@ public:
 		}
 	}
 
+public:
+	DualMapView(){
+		/* For fixed size Eigen types,
+		 * the default constructor allocates memory,
+		 * like in Eigen itself. */
+		using ET = EigenType_host;
+		if constexpr( ET::SizeAtCompileTime != Eigen::Dynamic ){
+			set(ET::RowsAtCompileTime, ET::ColsAtCompileTime);
+		}
+		/* For dynamically sized Eigen types, 
+		 * the default constructor does nothing */
+	}
+
+	DualMapView(
+		EigenType_host& hostObj,
+		DualViewCopyOnInit copyToTarget = CopyToTarget
+	) :
+		m_host  (hostObj),
+		m_target(hostObj)
+	{
+		if ( copyToTarget ){
+			this->copyToTarget();
+		}
+	}
+
+	DualMapView(Index rows, Index cols){
+		set(rows, cols);
+	}
+
 	/* For Eigen vector types,
 	 * we allow a single size parameter, like in Eigen itself. */
 	template<typename P = EigenType_host,
@@ -83,27 +98,6 @@ public:
 		 * so we could pass any numbers. */
 		DualMapView(size, size)
 	{
-		static_assert( std::is_same_v<P, EigenType_host> );
-	}
-
-	/* For fixed size Eigen types,
-	 * the default constructor allocates memory,
-	 * like in Eigen itself. */
-	template<typename P = EigenType_host,
-		typename std::enable_if_t<P::IsFixedSizeAtCompileTime, int> = 0>
-	DualMapView() :
-		/* DualMapView(Index, Index) overwrites rows/cols 
-		 * if they're known at compile time,
-		 * so we could pass any numbers. */
-		DualMapView(P::RowsAtCompileTime, P::ColsAtCompileTime)
-	{
-		static_assert( std::is_same_v<P, EigenType_host> );
-	}
-
-	/* For dynamically sized Eigen types, the default constructor does nothing */
-	template<typename P = EigenType_host,
-		typename std::enable_if_t<!P::IsFixedSizeAtCompileTime, int> = 0>
-	DualMapView(){
 		static_assert( std::is_same_v<P, EigenType_host> );
 	}
 
@@ -274,6 +268,28 @@ struct is_DualMapView<DualMapView<EigenType, targetArg>> : std::true_type {};
 
 template<typename T>
 inline constexpr bool is_DualMapView_v = is_DualMapView<T>::value;
+
+template<Target target = DefaultTarget, typename EigenType>
+std::enable_if_t<
+	std::is_base_of_v<Eigen::DenseBase<EigenType>, EigenType>,
+	DualMapView<EigenType, target>
+>
+dualMapView(
+	EigenType& eigenObj,
+	DualViewCopyOnInit copyToTarget = CopyToTarget
+){
+	return {eigenObj, copyToTarget};
+}
+
+#define KOKKIDIO_DUALMAPVIEW_FACTORY \
+template<typename EigenType, Target target = DefaultTarget> \
+DualMapView<EigenType, target> dualMapView
+
+KOKKIDIO_DUALMAPVIEW_FACTORY(){ return {}; }
+KOKKIDIO_DUALMAPVIEW_FACTORY(Index vectorSize){ return {vectorSize}; }
+KOKKIDIO_DUALMAPVIEW_FACTORY(Index rows, Index cols){ return {rows, cols}; }
+
+#undef KOKKIDIO_DUALMAPVIEW_FACTORY
 
 } // namespace Kokkidio
 
