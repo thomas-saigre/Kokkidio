@@ -51,6 +51,27 @@ and
 may be viewed as a common abstraction 
 for various programming models and backends, e.g.
 OpenMP, including target offloading, OpenACC, CUDA, HIP, and SYCL.
+Here's an example:
+
+.SAXPY with Kokkos
+[%collapsible,id=kokkos_ex]
+====
+[,cpp]
+----
+float a {0.5};
+std::size_t dim1 {10};
+/* for more details, see
+ * https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/View.html#constructing-a-view
+ */
+using View = Kokkos::View<float*, Kokkos::DefaultExecutionSpace>;
+View x {dim1}, y {dim1}, z {dim1};
+/* fill arrays in some way ... */
+/* and now do the computation in parallel */
+Kokkos::parallel_for( dim1, KOKKOS_LAMBDA(std::size_t i){
+	z(i) = a * x(i) + y(i);
+});
+----
+====
 
 While modern compilers already allow targeting multiple CPU architectures,
 due to ISAs functioning as a reliable standard (x86(-64), ARM, ...),
@@ -84,7 +105,7 @@ using loops, the 'Eigen way' is to operate on whole data structures
 using their overloaded operators or member functions. Here's an example:
 
 .Dot product in pure C++
-[%collapsible]
+[%collapsible,id=eigen_ex]
 ====
 [,cpp]
 ----
@@ -127,6 +148,21 @@ It does provide the
 https://eigen.tuxfamily.org/dox/classEigen_1_1Map.html[`Eigen::Map`] class, though, 
 with which other data structures can be treated like an Eigen object,
 if they expose a data pointer and their memory layout and stride(s) are known.
+
+
+== So what's the problem?
+
+In the <<kokkos_ex,Kokkos example>> above, you can see that 
+the the functor passed to Kokkos' `parallel_for` 
+(the `KOKKOS_LAMBDA` in that case) 
+contains the instructions for an *individual loop iteration*.
+By contrast, the *loop is fully abstracted* in the <<eigen_ex,Eigen example>>.
+There is no _user-facing_ loop iteration variable in an Eigen operation 
+that could be used to parallelise operations.
+
+Of course, that loop still exists, deep within the Eigen library.
+But while it is 
+So, one valid approach would be to modify core parts of Eigen
 
 
 == Parallel dispatch and the `ParallelRange` class
