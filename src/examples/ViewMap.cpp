@@ -28,9 +28,9 @@ int main(int argc, char** argv){
 	ViewMap mv2 {eigenArray};
 	auto mv3 = viewMap(eigenArray);
 	/* Note: 
-	 * Do not actually pass the same Eigen object to multiple MapViews!
+	 * Do not actually pass the same Eigen object to multiple ViewMaps!
 	 * If you do, then resize() will only apply to the Eigen object
-	 * and the ViewMap it was called on, but not the other MapViews. */
+	 * and the ViewMap it was called on, but not the other ViewMaps. */
 
 
 	/* Create ViewMap using size parameters. 

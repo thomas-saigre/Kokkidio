@@ -368,7 +368,7 @@ public:
 
 /* detection */
 template<typename T>
-inline constexpr bool is_MapView_v = ...;
+inline constexpr bool is_ViewMap_v = ...;
 
 
 /* factory functions */
@@ -402,7 +402,7 @@ and
 `copyToHost()`.
 
 
-It takes the same template parameters as <<_mapview,`ViewMap`>>, 
+It takes the same template parameters as <<_viewmap,`ViewMap`>>, 
 i.e. an `Eigen` type, and a `Target` value.
 While a `ViewMap` only exists on _either_ `host` or `device`, 
 `DualViewMap` always consists of _two_ ``ViewMap``s, 
@@ -419,7 +419,7 @@ as well as shortcuts to their ``map()``/``view()`` member functions
 in the form of
 ``map_host()``/``map_target()`` and ``view_host()``/``view_target()``.
 
-Similar to <<_mapview,`ViewMap`>>, it also allows to `resize()` its data,
+Similar to <<_viewmap,`ViewMap`>>, it also allows to `resize()` its data,
 and does so on both `host` and the specified `Target`.
 
 ==== Examples
@@ -483,17 +483,17 @@ public:
 	using EigenType_host = _EigenType;
 
 	using ThisType = DualViewMap<EigenType_host, target>;
-	using MapView_host   = ViewMap<EigenType_host, Target::host>;
-	using MapView_target = ViewMap<EigenType_host, target>;
-	using EigenType_target = typename MapView_target::EigenType_target;
-	using Scalar = typename MapView_target::Scalar;
+	using ViewMap_host   = ViewMap<EigenType_host, Target::host>;
+	using ViewMap_target = ViewMap<EigenType_host, target>;
+	using EigenType_target = typename ViewMap_target::EigenType_target;
+	using Scalar = typename ViewMap_target::Scalar;
 
-	using ViewType_host   = typename MapView_host  ::ViewType;
-	using ViewType_target = typename MapView_target::ViewType;
-	using ExecutionSpace_target = typename MapView_target::ExecutionSpace;
+	using ViewType_host   = typename ViewMap_host  ::ViewType;
+	using ViewType_target = typename ViewMap_target::ViewType;
+	using ExecutionSpace_target = typename ViewMap_target::ExecutionSpace;
 
-	using MapType_host   = typename MapView_host  ::MapType;
-	using MapType_target = typename MapView_target::MapType;
+	using MapType_host   = typename ViewMap_host  ::MapType;
+	using MapType_target = typename ViewMap_target::MapType;
 
 public:
 
@@ -515,13 +515,13 @@ public:
 	KOKKOS_FUNCTION bool isAlloc_host() const;
 	KOKKOS_FUNCTION bool isAlloc_target() const;
 
-	/* get MapViews */
-	KOKKOS_FUNCTION MapView_host   get_host  () const;
-	KOKKOS_FUNCTION MapView_target get_target() const;
+	/* get ViewMaps */
+	KOKKOS_FUNCTION ViewMap_host   get_host  () const;
+	KOKKOS_FUNCTION ViewMap_target get_target() const;
 
 	template<Target _target>
 	KOKKOS_FUNCTION auto get() const
-		-> std::conditional<_target == target, MapView_target, MapView_host>;
+		-> std::conditional<_target == target, ViewMap_target, ViewMap_host>;
 
 	/* get Kokkos::Views */
 	KOKKOS_FUNCTION ViewType_host   view_host  () const;
@@ -557,7 +557,7 @@ public:
 
 /* detection */
 template<typename T>
-inline constexpr bool is_DualMapView_v = ...;
+inline constexpr bool is_DualViewMap_v = ...;
 
 
 /* factory functions */

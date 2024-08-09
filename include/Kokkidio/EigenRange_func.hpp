@@ -74,10 +74,10 @@ KOKKIDIO_INL_AUTO eigenObj( T&& t ){
 	if constexpr (std::is_base_of_v<Eigen::DenseBase<U>, U>){
 		return t;
 	} else
-	if constexpr ( is_MapView_v<U> ){
+	if constexpr ( is_ViewMap_v<U> ){
 		return t.map();
 	} else
-	if constexpr ( is_DualMapView_v<U> ){
+	if constexpr ( is_DualViewMap_v<U> ){
 		return t.map_target();
 	}
 }

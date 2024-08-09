@@ -1,5 +1,5 @@
-#ifndef KOKKIDIO_DualMapView_HPP
-#define KOKKIDIO_DualMapView_HPP
+#ifndef KOKKIDIO_DUALVIEWMAP_HPP
+#define KOKKIDIO_DUALVIEWMAP_HPP
 
 #ifndef KOKKIDIO_PUBLIC_HEADER
 #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
@@ -25,17 +25,17 @@ public:
 	using EigenType_host = _EigenType;
 
 	using ThisType = DualViewMap<EigenType_host, target>;
-	using MapView_host   = ViewMap<EigenType_host, Target::host>;
-	using MapView_target = ViewMap<EigenType_host, target>;
-	using EigenType_target = typename MapView_target::EigenType_target;
-	using Scalar = typename MapView_target::Scalar;
+	using ViewMap_host   = ViewMap<EigenType_host, Target::host>;
+	using ViewMap_target = ViewMap<EigenType_host, target>;
+	using EigenType_target = typename ViewMap_target::EigenType_target;
+	using Scalar = typename ViewMap_target::Scalar;
 
-	using ViewType_host   = typename MapView_host  ::ViewType;
-	using ViewType_target = typename MapView_target::ViewType;
-	using ExecutionSpace_target = typename MapView_target::ExecutionSpace;
+	using ViewType_host   = typename ViewMap_host  ::ViewType;
+	using ViewType_target = typename ViewMap_target::ViewType;
+	using ExecutionSpace_target = typename ViewMap_target::ExecutionSpace;
 
-	using MapType_host   = typename MapView_host  ::MapType;
-	using MapType_target = typename MapView_target::MapType;
+	using MapType_host   = typename ViewMap_host  ::MapType;
+	using MapType_target = typename ViewMap_target::MapType;
 
 	static_assert(
 		is_owning_eigen_type<std::remove_const_t<EigenType_target>>::value ||
@@ -43,8 +43,8 @@ public:
 	);
 
 protected:
-	MapView_host   m_host;
-	MapView_target m_target;
+	ViewMap_host   m_host;
+	ViewMap_target m_target;
 
 	void set(Index rows, Index cols){
 		m_host = {rows, cols};
@@ -120,19 +120,19 @@ public:
 	}
 
 	KOKKOS_FUNCTION
-	auto get_host() const -> MapView_host {
+	auto get_host() const -> ViewMap_host {
 		return this->m_host;
 	}
 
 	KOKKOS_FUNCTION
-	auto get_target() const -> MapView_target {
+	auto get_target() const -> ViewMap_target {
 		return this->m_target;
 	}
 
 	template<Target _target>
 	KOKKOS_FUNCTION
 	auto get() const -> 
-		std::conditional<_target == target, MapView_target, MapView_host>
+		std::conditional<_target == target, ViewMap_target, ViewMap_host>
 	{
 		if constexpr (_target == target){
 			return this->get_target();
@@ -271,7 +271,7 @@ template<typename EigenType, Target targetArg>
 struct is_DualViewMap<DualViewMap<EigenType, targetArg>> : std::true_type {};
 
 template<typename T>
-inline constexpr bool is_DualMapView_v = is_DualViewMap<T>::value;
+inline constexpr bool is_DualViewMap_v = is_DualViewMap<T>::value;
 
 template<Target target = DefaultTarget, typename EigenType>
 std::enable_if_t<

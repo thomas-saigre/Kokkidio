@@ -1,5 +1,5 @@
-#ifndef KOKKIDIO_MapView_HPP
-#define KOKKIDIO_MapView_HPP
+#ifndef KOKKIDIO_VIEWMAP_HPP
+#define KOKKIDIO_VIEWMAP_HPP
 
 #ifndef KOKKIDIO_PUBLIC_HEADER
 #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
@@ -302,7 +302,7 @@ template<typename EigenType, Target target>
 struct is_ViewMap<ViewMap<EigenType, target>> : std::true_type {};
 
 template<typename T>
-inline constexpr bool is_MapView_v = is_ViewMap<T>::value;
+inline constexpr bool is_ViewMap_v = is_ViewMap<T>::value;
 
 template<Target target = DefaultTarget, typename EigenType>
 std::enable_if_t<
