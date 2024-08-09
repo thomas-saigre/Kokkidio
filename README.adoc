@@ -9,6 +9,7 @@
 :Kokkos: https://kokkos.org/[Kokkos]
 :GPLv3: https://www.gnu.org/licenses/gpl-3.0.en.html[GPLv3]
 :wahyd: https://www.wahyd.tu-berlin.de/
+:maplink: https://eigen.tuxfamily.org/dox/classEigen_1_1Map.html
 
 :viewmap: link:./include/Kokkidio/ViewMap.hpp[ViewMap]
 :dualviewmap: link:./include/Kokkidio/DualViewMap.hpp[DualViewMap]
@@ -35,7 +36,54 @@ which allows threads to efficiently access their assigned elements,
 * parallel dispatch functions (`parallel_for` and `parallel_reduce`) 
 compatible with functors taking `ParallelRange`, and
 * the <<_data_structures, data structures>> `ViewMap` and `DualViewMap`, 
-which combine an `Eigen::Map` and a `Kokkos::View`,
+which combine an `Eigen::Map` and a `Kokkos::View`.
+
+It allows you to write code like this (see link:./src/examples/axpy.cpp[file]):
+
+.ViewMap construction, copying data, and SAXPY with Kokkidio
+[%collapsible,id=kokkidio_ex]
+====
+[,cpp]
+----
+using namespace Kokkidio;
+float a {0.5};
+int size {10};
+
+using FloatArray = DualViewMap<Eigen::ArrayXf>;
+/* You may have an existing Eigen object */
+Eigen::ArrayXf x_existing {size};
+/* No need to replace it. You can simply wrap it in a (Dual)ViewMap: */
+FloatArray x {x_existing};
+
+/* Or you can construct them from sizes */
+FloatArray y {size}, z {size};
+
+/* We can use Kokkos functions on (Dual)ViewMaps, because their members
+ * "MapView::view", and
+ * "DualViewMap::view_<target>()" 
+ * return a Kokkos::View */
+Kokkos::deep_copy( y.view_host(), 123 );
+
+/* Likewise, we can use Eigen functions on (Dual)ViewMaps, as their members
+ * "MapView::map", and
+ * "DualViewMap::map_<target>()"
+ * return an Eigen::Map.
+ * Outside of a parallel dispatch, only the host side is accessible. */
+x.map_host().setRandom();
+y.map_host().setRandom();
+
+/* Copying data between host and compute target is simple: */
+x.copyToTarget(); // if the compute target is the host, this does nothing
+y.copyToTarget();
+
+/* This is how a parallel computation on the target is performed: */
+parallel_for( size, KOKKOS_LAMBDA(ParallelRange<> rng){
+	rng(z) = a * rng(x) + rng(y);
+});
+/* After the computation, you may copy the results back to the host */
+z.copyToHost();
+----
+====
 
 == Why Kokkos?
 
@@ -65,7 +113,9 @@ std::size_t dim1 {10};
  */
 using View = Kokkos::View<float*, Kokkos::DefaultExecutionSpace>;
 View x {dim1}, y {dim1}, z {dim1};
-/* fill arrays in some way ... */
+/* fill arrays in some way,
+ * e.g. using deep_copy or within a parallel dispatch ... */
+
 /* and now do the computation in parallel */
 Kokkos::parallel_for( dim1, KOKKOS_LAMBDA(std::size_t i){
 	z(i) = a * x(i) + y(i);
@@ -104,31 +154,62 @@ Instead of implementing matrix, vector, or coefficient-wise operations
 using loops, the 'Eigen way' is to operate on whole data structures 
 using their overloaded operators or member functions. Here's an example:
 
-.Dot product in pure C++
+// .Dot product in pure C++
+// [%collapsible,id=eigen_ex]
+// ====
+// [,cpp]
+// ----
+// std::size_t size {10};
+// std::vector<double> a {size}, b {size};
+// /* fill vectors in some way ... */
+// /* then loop over them and track the sum */
+// double sum {0};
+// for (std::size_t i=0; i<size; ++i){
+// 	sum += a * b;
+// }
+// ----
+// ====
+
+// .Dot product in Eigen
+// [%collapsible]
+// ====
+// [,cpp]
+// ----
+// Eigen::Index size {10};
+// Eigen::VectorXd a {size}, b {size};
+// /* fill vectors in some way ... */
+// double sum = a.dot(b);
+// ----
+// ====
+
+
+.SAXPY in pure C++
 [%collapsible,id=eigen_ex]
 ====
 [,cpp]
 ----
 std::size_t size {10};
-std::vector<double> a {size}, b {size};
+double a {0.5};
+std::vector<double> x {size}, y {size}, z {size};
 /* fill vectors in some way ... */
-/* then loop over them and track the sum */
-double sum {0};
+/* then loop over them and perform the computation element-wise */
 for (std::size_t i=0; i<size; ++i){
-	sum += a * b;
+	z[i] = a * x[i] + y[i];
 }
 ----
 ====
 
-.Dot product in Eigen
+.SAXPY in Eigen
 [%collapsible]
 ====
 [,cpp]
 ----
 Eigen::Index size {10};
-Eigen::VectorXd a {size}, b {size};
-/* fill vectors in some way ... */
-double sum = a.dot(b);
+double a {0.5};
+Eigen::VectorXd x {size}, y {size}, z {size};
+/* fill vectors in some way, e.g. using member func setRandom() ... */
+/* The computation is expressed with the whole object: */
+z = a * x + y;
 ----
 ====
 
@@ -138,22 +219,35 @@ This notably includes explicit vectorisation for all common CPU vector extension
 such as the SSE and AVX families on x86, ARM NEON, and others.
 // mention expression templates?
 
-Since version 3.4, Eigen functions can be called from CUDA/HIP kernels,
-and its compatibility with SYCL is in a usable state since at least early 2024
-and under active development.
-However, neither its allocators for dynamically-sized data structures, 
-nor SIMD parallelism (like vectorisation on CPUs) 
-are currently available on GPUs.
-It does provide the 
-https://eigen.tuxfamily.org/dox/classEigen_1_1Map.html[`Eigen::Map`] class, though, 
-with which other data structures can be treated like an Eigen object,
-if they expose a data pointer and their memory layout and stride(s) are known.
-
+// Since version 3.4, Eigen functions can be called from CUDA/HIP kernels,
+// and its compatibility with SYCL is in a usable state since at least early 2024
+// and under active development.
+// However, neither its allocators for dynamically-sized data structures, 
+// nor SIMD parallelism (like vectorisation on CPUs) 
+// are currently available on GPUs.
+// It does provide the {maplink}[`Eigen::Map`]
+// class, though, 
+// with which other data structures can be treated like an Eigen object,
+// if they expose a data pointer and their memory layout and stride(s) are known.
 
 == And why Kokkidio?
 
-=== The problem
+There exist a number of problems when trying to use Eigen's functionality on GPUs,
+which are detailed below -- and which _Kokkidio_ aims to address.
 
+=== The problems
+
+. *Data structures* +
+Since version 3.4, Eigen functions can be called from CUDA/HIP kernels,
+and its compatibility with SYCL is in a usable state since at least early 2024
+and under active development.
+However, only fixed-size objects can be created on GPUs -- 
+dynamically-sized data structures are only available on and from the host.
+There is the {maplink}[`Eigen::Map`] class, though, 
+with which other data structures can be treated like an Eigen object,
+if they expose a data pointer and their memory layout and stride(s) are known.
+
+. *Loop abstraction and parallelism 1* +
 In the <<kokkos_ex,Kokkos example>> above, you can see 
 the functor passed to Kokkos' `parallel_for` 
 (the `KOKKOS_LAMBDA` in that case) 
@@ -161,19 +255,93 @@ containing the instructions for an *individual loop iteration*.
 By contrast, the *loop is fully abstracted* in the <<eigen_ex,Eigen example>>.
 There is no _user-facing_ loop iteration variable in an Eigen operation 
 that could be used to parallelise operations.
-
++
 Of course, that loop still exists, deep within the Eigen library.
 While it could potentially be parallelised there, 
 // sweeping changes to Eigen's interface would be necessary as well 
 // to make this practical.
-the interface of Eigen is not set up to facilitate anything like this,
-and thus sweeping changes to the whole library would be necessary.
+the interface of Eigen is not set up to facilitate anything like this.
+Therefore, sweeping changes to the whole library would be necessary, 
+with all the compatibility and testing issues that brings.
 // Parallel execution would have to be conditional, 
 // as a kernel dispatch would not make sense for every operation,
 // and to prevent accidental nesting.
 
-=== A partial solution
+. *Parallelism 2: Chunk sizes, vectorisation, and readability* +
+// Furthermore, when 
+When
+parallelising an Eigen operation as a library user,
+the ideal strategy for assigning work to threads 
+is rather different between CPUs and GPUs.
+On a GPU, the large number of relatively weak cores 
+leads to many small units of work performing better.
+// a large number of small units of work perform better, 
+// while 
+By contrast, 
+on a CPU, fewer, larger, and contiguous chunks are preferable,
+to allow for vectorised operations. 
++
+// Let's use a (slightly) more involved example, 
+// where an individual thread's operation is still done with Eigen:
+// Here's an example with Eigen, where columns of matrices are (dot-) multiplied:
+Here's an example to illustrate this difference.
+We're not using SAXPY, but instead multiply matrix columns, 
+so that individual threads still use Eigen functionality.
++
+.Multiply matrix columns (see link:./src/examples/dot.cpp[file])
+[%collapsible]
+====
+[,cpp]
+----
+int nRows {4}, nCols {1000};
+Eigen::MatrixXd a {nRows, nCols}, b;
+b.resizeLike(a);
+/* fill matrices in some way ... */
+double result; // let's sum up the results to not need another array
+/* One could do a nested loop and manually implement the dot product.
+ * We skip that here, because for that you wouldn't use Eigen */
 
+/* Instead, one could either distribute individual column-multiplications, 
+ * as one might do on a GPU, if nCols >> nRows */
+result = 0;
+for (int i=0; i<nCols; ++i){
+	result += a.col(i).transpose() * b.col(i);
+	/* this is equivalent: */
+	// result += a.col(i).dot( b.col(i) );
+}
+
+/* Or, one could distribute blocks of the matrices to threads and let Eigen
+ * handle the loop over columns, as may be preferable on a CPU.
+ * This can be a lot faster, as it allows Eigen to vectorise the operation. */
+result = 0;
+int nCores {4}; // just for illustration
+int nColsPerCore {nCols / nCores}; // not handling remainders
+
+for (int i=0; i<nCores; ++i){
+	int firstCol {i * nColsPerCore};
+	result += (
+		a.middleCols(firstCol, nColsPerCore).transpose() * 
+		b.middleCols(firstCol, nColsPerCore)
+	).trace(); // trace = sum of the diagonal
+}
+----
+====
+Not only do the loop bodies differ quite significantly,
+but Eigen's advantage of short and readable source code 
+is also somewhat diminished, when parallelising code in this fashion.
+
+
+=== Approaching solutions
+
+_Kokkidio_ solves the first issue of Eigen's data structures 
+not being compatible with GPU programming models by 
+wrapping a `Kokkos::View` in a class called `ViewMap`.
+It provides access to the contained `Kokkos::View`, 
+but additionally uses Eigen's {maplink}[`Map`] feature 
+to allow the contained data to be treated like an `Eigen` object --
+even on GPUs. More detail is provided in the section <<_data_structures>>.
+
+As long as Eigen's functionality  abstraction is still useful
 
 == Parallel dispatch and the `ParallelRange` class
 
@@ -582,62 +750,6 @@ template<typename EigenType, Target target = DefaultTarget>
 DualViewMap<EigenType, target> dualViewMap(Index rows, Index cols);
 ----
 ====
-
-== Examples
-
-The `ViewMap` and `DualViewMap` classes can be instantiated in a similar fashion to `Eigen` classes, 
-with similar behaviour:
-
-```c++
-using namespace Kokkidio;
-ViewMap<Eigen::MatrixXd>
-	a, // default construction, no allocation
-	b (2, 3); // constructs 
-```
-and [`DualViewMap`] are designed to function  
-Here's an example using a `DualViewMap`:
-
-```c++
-/* "Target" is an enum containing "host" and "device".
- * Generally, you can just set it to "DefaultTarget",
- * which queries Kokkos' default execution space. */
-constexpr target {DefaultTarget};
-using MatrixView = DualViewMap<Eigen::MatrixXd, target>;
-int nRows {4}, nCols {1000};
-
-/* The DualViewMap constructors which take sizes allocate memory 
- * on both host and target: */
-MatrixView mat (nRows, nCols);
-
-/* The DualViewMap constructors which take Eigen objects only allocate
- * memory on the target, or none at all, if target==host: */
-Eigen::MatrixXd existingMat (nRows, nCols);
-MatrixView mat2 {existingMat};
-
-/* You can use Kokkos routines via the view_[host|target]() member functions, 
- * e.g. for setting all elements to 123: */
-Kokkos::deep_copy(mat.view_host(), 123);
-
-/* or you can use Eigen routines via map_[host|target](): */
-mat.map_host().setRandom();
-
-/* Copy data to the target space (does nothing if target==host): */
-mat.copyToTarget();
-
-/* To operate on it, we create a functor, which is then passed to 
- * a parallel dispatch function. Our functor here gets the sum of our data: */
-auto func = KOKKOS_LAMBDA(ParallelRange<target> rng, double& sum){
-	/* pass an Eigen(Dual)View or Eigen object to a ParallelRange
-	 * to get the elements associated with a thread (Eigen::Block) */
-	sum += rng(mat);
-}
-
-double result {0};
-/* parallel_[for|reduce] in the Kokkidio namespace allow passing functions 
- * which take a ParallelRange, but otherwise they work exactly like
- * Kokkos::parallel_[for|reduce]: */
-parallel_reduce<DefaultTarget>( nCols, func, redux::sum(result) );
-```
 
 == Licence
 
