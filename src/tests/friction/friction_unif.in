@@ -39,13 +39,13 @@ void friction(
 		bufRows = 0;
 	}
 
-	Kokkidio::MapView<ArrayXXs, target>
+	Kokkidio::ViewMap<ArrayXXs, target>
 		buf {bufRows, nCols};
 
-	Kokkidio::DualMapView<ArrayXXs, target>
+	Kokkidio::DualViewMap<ArrayXXs, target>
 		flux_out_view {flux_out, DontCopyToTarget};
 
-	Kokkidio::DualMapView<const ArrayXXs, target>
+	Kokkidio::DualViewMap<const ArrayXXs, target>
 		flux_in_view {flux_in},
 		d_view {d},
 		v_view {v},

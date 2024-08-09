@@ -10,8 +10,8 @@
 :GPLv3: https://www.gnu.org/licenses/gpl-3.0.en.html[GPLv3]
 :wahyd: https://www.wahyd.tu-berlin.de/
 
-:mapview: link:./include/Kokkidio/MapView.hpp[MapView]
-:dualmapview: link:./include/Kokkidio/DualMapView.hpp[DualMapView]
+:viewmap: link:./include/Kokkidio/ViewMap.hpp[ViewMap]
+:dualviewmap: link:./include/Kokkidio/DualViewMap.hpp[DualViewMap]
 :parallelrange: link:./include/Kokkidio/ParallelRange.hpp[ParallelRange]
 
 
@@ -34,7 +34,7 @@ _Kokkidio_ consists of three interlocking elements:
 which allows threads to efficiently access their assigned elements, 
 * parallel dispatch functions (`parallel_for` and `parallel_reduce`) 
 compatible with functors taking `ParallelRange`, and
-* the <<_data_structures, data structures>> `MapView` and `DualMapView`, 
+* the <<_data_structures, data structures>> `ViewMap` and `DualViewMap`, 
 which combine an `Eigen::Map` and a `Kokkos::View`,
 
 == Why Kokkos?
@@ -150,19 +150,29 @@ with which other data structures can be treated like an Eigen object,
 if they expose a data pointer and their memory layout and stride(s) are known.
 
 
-== So what's the problem?
+== And why Kokkidio?
 
-In the <<kokkos_ex,Kokkos example>> above, you can see that 
-the the functor passed to Kokkos' `parallel_for` 
+=== The problem
+
+In the <<kokkos_ex,Kokkos example>> above, you can see 
+the functor passed to Kokkos' `parallel_for` 
 (the `KOKKOS_LAMBDA` in that case) 
-contains the instructions for an *individual loop iteration*.
+containing the instructions for an *individual loop iteration*.
 By contrast, the *loop is fully abstracted* in the <<eigen_ex,Eigen example>>.
 There is no _user-facing_ loop iteration variable in an Eigen operation 
 that could be used to parallelise operations.
 
 Of course, that loop still exists, deep within the Eigen library.
-But while it is 
-So, one valid approach would be to modify core parts of Eigen
+While it could potentially be parallelised there, 
+// sweeping changes to Eigen's interface would be necessary as well 
+// to make this practical.
+the interface of Eigen is not set up to facilitate anything like this,
+and thus sweeping changes to the whole library would be necessary.
+// Parallel execution would have to be conditional, 
+// as a kernel dispatch would not make sense for every operation,
+// and to prevent accidental nesting.
+
+=== A partial solution
 
 
 == Parallel dispatch and the `ParallelRange` class
@@ -189,14 +199,14 @@ Kokkos::parallel_for( size, KOKKOS_LAMBDA(int i){ // i is our iteration variable
 
 == Data structures
 
-=== `MapView`
+=== `ViewMap`
 
-The core of the `MapView` class (see link:./include/Kokkidio/MapView.hpp[file])
+The core of the `ViewMap` class (see link:./include/Kokkidio/ViewMap.hpp[file])
 are the two member functions `map()` and `view()`,
 which return an `Eigen::Map`, and a `Kokkos::View` respectively, 
 and thus allow it to be used in either library's functions.
 
-`MapView` takes two template parameters:
+`ViewMap` takes two template parameters:
 
 . `EigenType`: The `Eigen` class to be used as the map type, 
 e.g. `Eigen::MatrixXd` or `Eigen::Array3i`. 
@@ -206,9 +216,9 @@ Only dense types are currently supported.
 This parameter is optional. 
 Its default value matches `Kokkos::DefaultExecutionSpace`.
 
-`MapView` can be instantiated either using an existing `Eigen` object, 
+`ViewMap` can be instantiated either using an existing `Eigen` object, 
 or using the same size parameters as you would for the `Eigen` type. 
-Here's what happens when you create a `MapView`:
+Here's what happens when you create a `ViewMap`:
 
 . With an existing `Eigen` object: 
 
@@ -229,18 +239,18 @@ and fixed size types can be created without them.
 
 In all of the above cases, the data pointers of `view()` and `map()` 
 contain the same address. 
-Furthermore, when instantiating a `MapView` with 
+Furthermore, when instantiating a `ViewMap` with 
 a non-const, owning `Eigen` object (i.e. not itself an `Eigen::Map`),
 a non-owning pointer to the object is stored 
 to allow resizing both the `Kokkos::View` and the `Eigen` object 
-via `MapView::resize()`.
+via `ViewMap::resize()`.
 
 ==== Examples
 
 The examples below are taken from
-link:./src/examples/MapView.cpp[examples/MapView.cpp].
+link:./src/examples/ViewMap.cpp[examples/ViewMap.cpp].
 
-.Expand MapView examples
+.Expand ViewMap examples
 [%collapsible]
 ====
 [,cpp]
@@ -251,30 +261,30 @@ int nRows {10}, nCols {20};
 /* existing Eigen object */
 Eigen::ArrayXXd eigenArray {nRows, nCols};
 
-/* Create MapView using a constructor or factory function.
+/* Create ViewMap using a constructor or factory function.
  * Deduces Eigen type, and uses default target */
-MapView mv1 {eigenArray};
-auto mv2 = mapView(eigenArray);
+ViewMap mv1 {eigenArray};
+auto mv2 = viewMap(eigenArray);
 
-/* Create MapView using factory function for specific target,
+/* Create ViewMap using factory function for specific target,
  * while deducing Eigen type */
-auto mv3 = mapView<Target::host>(eigenArray);
+auto mv3 = viewMap<Target::host>(eigenArray);
 
-/* Create MapView using size parameters. 
+/* Create ViewMap using size parameters. 
  * ArrayXXd is dynamically sized in both dimensions, 
  * so two parameters are required */
-MapView<Eigen::ArrayXXd> mv4 {nRows, nCols};
+ViewMap<Eigen::ArrayXXd> mv4 {nRows, nCols};
 
 /* ArrayXd is a column vector, so only rows are required */
-MapView<Eigen::ArrayXd> mv5 {nRows};
+ViewMap<Eigen::ArrayXd> mv5 {nRows};
 
 /* Array3d is a fixed size type, so no parameters are required */
-MapView<Eigen::Array3d> mv6;
+ViewMap<Eigen::Array3d> mv6;
 
-/* set values on host, using Eigen's assignment operator on MapView::map() */
+/* set values on host, using Eigen's assignment operator on ViewMap::map() */
 mv1.map() = 1;
 
-/* set values on target, using Kokkos::deep_copy with MapView::view() */
+/* set values on target, using Kokkos::deep_copy with ViewMap::view() */
 Kokkos::deep_copy(mv2.view(), 2);
 
 /* set values on target with parallel dispatch: */
@@ -292,14 +302,14 @@ parallel_for( mv4.size(), KOKKOS_LAMBDA(int i){
 
 ==== Synopsis
 
-.Expand synopsis of MapView
+.Expand synopsis of ViewMap
 [%collapsible]
 ====
 [,cpp]
 ----
 
 template<typename _EigenType, Target targetArg = DefaultTarget>
-class MapView {
+class ViewMap {
 public:
 	static constexpr Target target { ExecutionTarget<targetArg> };
 	using EigenType_host = _EigenType;
@@ -309,7 +319,7 @@ public:
 		std::remove_const_t<EigenType_host>
 	>;
 
-	using ThisType = MapView<EigenType_target, target>;
+	using ThisType = ViewMap<EigenType_target, target>;
 
 	using Scalar     = typename EigenType_target::Scalar;
 	using MapType    = Eigen::Map<EigenType_host>;
@@ -328,10 +338,10 @@ public:
 public:
 
 	/* constructors */
-	MapView(); // default, allocation only for fixed size types
-	MapView(Index size); // 1D types
-	MapView(Index rows, Index cols); // 2D types
-	MapView( _EigenType& hostObj ); // existing Eigen objects
+	ViewMap(); // default, allocation only for fixed size types
+	ViewMap(Index size); // 1D types
+	ViewMap(Index rows, Index cols); // 2D types
+	ViewMap( _EigenType& hostObj ); // existing Eigen objects
 
 	/* "resize" and constructors can only be called from host */
 	void resize(Index rows, Index cols);
@@ -365,25 +375,25 @@ inline constexpr bool is_MapView_v = ...;
 
 /* specify target, deduce EigenType */
 template<Target target = DefaultTarget, typename EigenType>
-MapView<EigenType, target> mapView( EigenType& eigenObj );
+ViewMap<EigenType, target> viewMap( EigenType& eigenObj );
 
 /* specify EigenType, optionally specify target, fixed size */
 template<typename EigenType, Target target = DefaultTarget>
-MapView<EigenType, target> mapView();
+ViewMap<EigenType, target> viewMap();
 
 /* specify EigenType, optionally specify target, 1D */
 template<typename EigenType, Target target = DefaultTarget>
-MapView<EigenType, target> mapView(Index vectorSize);
+ViewMap<EigenType, target> viewMap(Index vectorSize);
 
 /* specify EigenType, optionally specify target, 2D */
 template<typename EigenType, Target target = DefaultTarget>
-MapView<EigenType, target> mapView(Index rows, Index cols);
+ViewMap<EigenType, target> viewMap(Index rows, Index cols);
 ----
 ====
 
-=== `DualMapView`
+=== `DualViewMap`
 
-`DualMapView` (see link:./include/Kokkidio/DualMapView.hpp[file])
+`DualViewMap` (see link:./include/Kokkidio/DualViewMap.hpp[file])
 is designed to facilitate easy data exchange between `host` 
 and the compute `Target`. 
 To this end, it provides the member functions
@@ -392,16 +402,16 @@ and
 `copyToHost()`.
 
 
-It takes the same template parameters as <<_mapview,`MapView`>>, 
+It takes the same template parameters as <<_mapview,`ViewMap`>>, 
 i.e. an `Eigen` type, and a `Target` value.
-While a `MapView` only exists on _either_ `host` or `device`, 
-`DualMapView` always consists of _two_ ``MapView``s, 
+While a `ViewMap` only exists on _either_ `host` or `device`, 
+`DualViewMap` always consists of _two_ ``ViewMap``s, 
 of which one is located on `host`, 
 and the other on the specified `Target`. 
 If the `Target` is also `host`, then the two views are identical,
 and `copyTo...()` operations are correspondingly skipped.
 
-To access the ``MapView``s, it provides the member functions
+To access the ``ViewMap``s, it provides the member functions
 `get_host()`
 and
 `get_target()`,
@@ -409,15 +419,15 @@ as well as shortcuts to their ``map()``/``view()`` member functions
 in the form of
 ``map_host()``/``map_target()`` and ``view_host()``/``view_target()``.
 
-Similar to <<_mapview,`MapView`>>, it also allows to `resize()` its data,
+Similar to <<_mapview,`ViewMap`>>, it also allows to `resize()` its data,
 and does so on both `host` and the specified `Target`.
 
 ==== Examples
 
 The examples below are taken from
-link:./src/examples/DualMapView.cpp[examples/DualMapView.cpp].
+link:./src/examples/DualViewMap.cpp[examples/DualViewMap.cpp].
 
-.Expand DualMapView examples
+.Expand DualViewMap examples
 [%collapsible]
 ====
 [,cpp]
@@ -430,12 +440,12 @@ Eigen::ArrayXXd eigenArray {nRows, nCols};
 /* By default, when initialising with an Eigen object,
  * the object's data is copied to the target. 
  * This behaviour be changed with an optional parameter: DontCopyToTarget */
-DualMapView d1 {eigenArray};
-auto d2 = dualMapView(eigenArray, DontCopyToTarget);
-/* Otherwise, a DualMapView can be created in exactly the same ways as a 
- * MapView, so please refer to MapView.cpp for more examples. */
+DualViewMap d1 {eigenArray};
+auto d2 = dualViewMap(eigenArray, DontCopyToTarget);
+/* Otherwise, a DualViewMap can be created in exactly the same ways as a 
+ * ViewMap, so please refer to ViewMap.cpp for more examples. */
 
-/* with DualMapView, you can set your values on host, 
+/* with DualViewMap, you can set your values on host, 
  * then copy them to the target: */
 d2.map_host() = 123;
 d2.copyToTarget();
@@ -460,21 +470,21 @@ print("after");
 
 ==== Synopsis
 
-.Expand synopsis of DualMapView
+.Expand synopsis of DualViewMap
 [%collapsible]
 ====
 [,cpp]
 ----
 
 template<typename _EigenType, Target targetArg = DefaultTarget>
-class DualMapView {
+class DualViewMap {
 public:
 	static constexpr Target target { ExecutionTarget<targetArg> };
 	using EigenType_host = _EigenType;
 
-	using ThisType = DualMapView<EigenType_host, target>;
-	using MapView_host   = MapView<EigenType_host, Target::host>;
-	using MapView_target = MapView<EigenType_host, target>;
+	using ThisType = DualViewMap<EigenType_host, target>;
+	using MapView_host   = ViewMap<EigenType_host, Target::host>;
+	using MapView_target = ViewMap<EigenType_host, target>;
 	using EigenType_target = typename MapView_target::EigenType_target;
 	using Scalar = typename MapView_target::Scalar;
 
@@ -488,10 +498,10 @@ public:
 public:
 
 	/* constructors */
-	DualMapView(); // default, allocation only for fixed size types
-	DualMapView(Index size); // 1D types
-	DualMapView(Index rows, Index cols); // 2D types
-	DualMapView(
+	DualViewMap(); // default, allocation only for fixed size types
+	DualViewMap(Index size); // 1D types
+	DualViewMap(Index rows, Index cols); // 2D types
+	DualViewMap(
 		EigenType_host& hostObj,
 		DualViewCopyOnInit copyToTarget = CopyToTarget
 	);  // existing Eigen objects
@@ -554,52 +564,52 @@ inline constexpr bool is_DualMapView_v = ...;
 
 /* specify target, deduce EigenType */
 template<Target target = DefaultTarget, typename EigenType>
-DualMapView<EigenType, target> dualMapView(
+DualViewMap<EigenType, target> dualViewMap(
 	EigenType& eigenObj,
 	DualViewCopyOnInit copyToTarget = CopyToTarget
 );
 
 /* specify EigenType, optionally specify target, fixed size */
 template<typename EigenType, Target target = DefaultTarget>
-DualMapView<EigenType, target> dualMapView();
-dualMapViewk
+DualViewMap<EigenType, target> dualViewMap();
+
 /* specify EigenType, optionally specify target, 1D */
 template<typename EigenType, Target target = DefaultTarget>
-DualMapView<EigenType, target> dualMapView(Index vectorSize);
+DualViewMap<EigenType, target> dualViewMap(Index vectorSize);
 
 /* specify EigenType, optionally specify target, 2D */
 template<typename EigenType, Target target = DefaultTarget>
-DualMapView<EigenType, target> dualMapView(Index rows, Index cols);
+DualViewMap<EigenType, target> dualViewMap(Index rows, Index cols);
 ----
 ====
 
 == Examples
 
-The `MapView` and `DualMapView` classes can be instantiated in a similar fashion to `Eigen` classes, 
+The `ViewMap` and `DualViewMap` classes can be instantiated in a similar fashion to `Eigen` classes, 
 with similar behaviour:
 
 ```c++
 using namespace Kokkidio;
-MapView<Eigen::MatrixXd>
+ViewMap<Eigen::MatrixXd>
 	a, // default construction, no allocation
 	b (2, 3); // constructs 
 ```
-and [`DualMapView`] are designed to function  
-Here's an example using a `DualMapView`:
+and [`DualViewMap`] are designed to function  
+Here's an example using a `DualViewMap`:
 
 ```c++
 /* "Target" is an enum containing "host" and "device".
  * Generally, you can just set it to "DefaultTarget",
  * which queries Kokkos' default execution space. */
 constexpr target {DefaultTarget};
-using MatrixView = DualMapView<Eigen::MatrixXd, target>;
+using MatrixView = DualViewMap<Eigen::MatrixXd, target>;
 int nRows {4}, nCols {1000};
 
-/* The DualMapView constructors which take sizes allocate memory 
+/* The DualViewMap constructors which take sizes allocate memory 
  * on both host and target: */
 MatrixView mat (nRows, nCols);
 
-/* The DualMapView constructors which take Eigen objects only allocate
+/* The DualViewMap constructors which take Eigen objects only allocate
  * memory on the target, or none at all, if target==host: */
 Eigen::MatrixXd existingMat (nRows, nCols);
 MatrixView mat2 {existingMat};

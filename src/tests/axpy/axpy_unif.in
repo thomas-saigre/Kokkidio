@@ -10,10 +10,10 @@ namespace Kokkidio::unif
 template<Target target, Kernel k>
 void axpy(KOKKIDIO_AXPY_ARGS){
 
-	Kokkidio::DualMapView<ArrayXs, target>
+	Kokkidio::DualViewMap<ArrayXs, target>
 		zview {z, DontCopyToTarget};
 
-	Kokkidio::DualMapView<const ArrayXs, target>
+	Kokkidio::DualViewMap<const ArrayXs, target>
 		xview {x},
 		yview {y};
 

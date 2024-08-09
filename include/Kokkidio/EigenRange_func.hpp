@@ -5,8 +5,8 @@
 #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
 #endif
 
-#include "Kokkidio/MapView.hpp"
-#include "Kokkidio/DualMapView.hpp"
+#include "Kokkidio/ViewMap.hpp"
+#include "Kokkidio/DualViewMap.hpp"
 #include "Kokkidio/ompSegment.hpp"
 #include "Kokkidio/typeHelpers.hpp"
 #include "Kokkidio/typeAliases.hpp"

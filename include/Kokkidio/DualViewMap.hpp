@@ -5,7 +5,7 @@
 #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
 #endif
 
-#include "Kokkidio/MapView.hpp"
+#include "Kokkidio/ViewMap.hpp"
 
 namespace Kokkidio
 {
@@ -19,14 +19,14 @@ enum DualViewCopyOnInit {
 
 
 template<typename _EigenType, Target targetArg = DefaultTarget>
-class DualMapView {
+class DualViewMap {
 public:
 	static constexpr Target target { ExecutionTarget<targetArg> };
 	using EigenType_host = _EigenType;
 
-	using ThisType = DualMapView<EigenType_host, target>;
-	using MapView_host   = MapView<EigenType_host, Target::host>;
-	using MapView_target = MapView<EigenType_host, target>;
+	using ThisType = DualViewMap<EigenType_host, target>;
+	using MapView_host   = ViewMap<EigenType_host, Target::host>;
+	using MapView_target = ViewMap<EigenType_host, target>;
 	using EigenType_target = typename MapView_target::EigenType_target;
 	using Scalar = typename MapView_target::Scalar;
 
@@ -60,7 +60,7 @@ protected:
 	}
 
 public:
-	DualMapView(){
+	DualViewMap(){
 		/* For fixed size Eigen types,
 		 * the default constructor allocates memory,
 		 * like in Eigen itself. */
@@ -72,7 +72,7 @@ public:
 		 * the default constructor does nothing */
 	}
 
-	DualMapView(
+	DualViewMap(
 		EigenType_host& hostObj,
 		DualViewCopyOnInit copyToTarget = CopyToTarget
 	) :
@@ -84,17 +84,17 @@ public:
 		}
 	}
 
-	DualMapView(Index rows, Index cols){
+	DualViewMap(Index rows, Index cols){
 		set(rows, cols);
 	}
 
 	/* For Eigen vector types,
 	 * we allow a single size parameter, like in Eigen itself. */
-	DualMapView(Index size) :
-		/* DualMapView(Index, Index) overwrites rows/cols 
+	DualViewMap(Index size) :
+		/* DualViewMap(Index, Index) overwrites rows/cols 
 		 * if they're known at compile time,
 		 * so we could pass any numbers. */
-		DualMapView(size, size)
+		DualViewMap(size, size)
 	{
 		static_assert(EigenType_host::IsVectorAtCompileTime);
 	}
@@ -233,7 +233,7 @@ public:
 				);
 			}
 		} else {
-			printd( "DualMapView::copyToTarget, target==host, skipping...\n");
+			printd( "DualViewMap::copyToTarget, target==host, skipping...\n");
 			assert( this->view_target().data() == this->view_host().data() );
 			assert( this-> map_target().data() == this-> map_host().data() );
 		}
@@ -257,7 +257,7 @@ public:
 				);
 			}
 		} else {
-			printd( "DualMapView::copyToHost, target==host, skipping...\n");
+			printd( "DualViewMap::copyToHost, target==host, skipping...\n");
 			assert( this->view_target().data() == this->view_host().data() );
 			assert( this-> map_target().data() == this-> map_host().data() );
 		}
@@ -265,20 +265,20 @@ public:
 };
 
 template<typename T>
-struct is_DualMapView : std::false_type {};
+struct is_DualViewMap : std::false_type {};
 
 template<typename EigenType, Target targetArg>
-struct is_DualMapView<DualMapView<EigenType, targetArg>> : std::true_type {};
+struct is_DualViewMap<DualViewMap<EigenType, targetArg>> : std::true_type {};
 
 template<typename T>
-inline constexpr bool is_DualMapView_v = is_DualMapView<T>::value;
+inline constexpr bool is_DualMapView_v = is_DualViewMap<T>::value;
 
 template<Target target = DefaultTarget, typename EigenType>
 std::enable_if_t<
 	std::is_base_of_v<Eigen::DenseBase<EigenType>, EigenType>,
-	DualMapView<EigenType, target>
+	DualViewMap<EigenType, target>
 >
-dualMapView(
+dualViewMap(
 	EigenType& eigenObj,
 	DualViewCopyOnInit copyToTarget = CopyToTarget
 ){
@@ -287,7 +287,7 @@ dualMapView(
 
 #define KOKKIDIO_DUALMAPVIEW_FACTORY \
 template<typename EigenType, Target target = DefaultTarget> \
-DualMapView<EigenType, target> dualMapView
+DualViewMap<EigenType, target> dualViewMap
 
 KOKKIDIO_DUALMAPVIEW_FACTORY(){ return {}; }
 KOKKIDIO_DUALMAPVIEW_FACTORY(Index vectorSize){ return {vectorSize}; }

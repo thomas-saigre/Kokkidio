@@ -7,8 +7,8 @@
 
 #include "Kokkidio/macros.hpp"
 #include "Kokkidio/mathWrapper.hpp"
-#include "Kokkidio/MapView.hpp"
-#include "Kokkidio/DualMapView.hpp"
+#include "Kokkidio/ViewMap.hpp"
+#include "Kokkidio/DualViewMap.hpp"
 #include "Kokkidio/ParallelRange.hpp"
 #include "Kokkidio/parallel_for.hpp"
 #include "Kokkidio/parallel_reduce.hpp"

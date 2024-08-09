@@ -18,11 +18,11 @@ namespace Kokkidio
 {
 
 template<typename _EigenType, Target targetArg = DefaultTarget>
-class MapView {
+class ViewMap {
 public:
 	static constexpr Target target { ExecutionTarget<targetArg> };
 	using EigenType_host = _EigenType;
-	/* To make the MapView work, the device view must be non-const in most 
+	/* To make the ViewMap work, the device view must be non-const in most 
 	 * cases, to not end up with inaccessible device memory.
 	 * However, if the target is the host, then a cast to non-const
 	 * could allow write access to a const object. 
@@ -33,7 +33,7 @@ public:
 		std::remove_const_t<EigenType_host>
 	>;
 
-	using ThisType = MapView<EigenType_target, target>;
+	using ThisType = ViewMap<EigenType_target, target>;
 	using MemorySpace    = Kokkidio::MemorySpace   <target>;
 	using ExecutionSpace = Kokkidio::ExecutionSpace<target>;
 private:
@@ -56,8 +56,8 @@ public:
 	 * the default constructor allocates memory,
 	 * while for dynamically sized Eigen objects, it does nothing,
 	 * like in Eigen itself. */
-	MapView(){
-		/* MapView(Index, Index) overwrites rows/cols 
+	ViewMap(){
+		/* ViewMap(Index, Index) overwrites rows/cols 
 		 * if they're known at compile time,
 		 * so we could pass any numbers. */
 		using P = EigenType_host;
@@ -66,7 +66,7 @@ public:
 		}
 	}
 
-	MapView(Index rows, Index cols){
+	ViewMap(Index rows, Index cols){
 		this->allocView(rows, cols);
 	}
 
@@ -74,16 +74,16 @@ public:
 	 * we allow a single size parameter, like in Eigen itself. */
 	template<typename P = EigenType_host,
 		typename std::enable_if_t<P::IsVectorAtCompileTime, int> = 0>
-	MapView(Index size) :
-		/* MapView(Index, Index) overwrites rows/cols 
+	ViewMap(Index size) :
+		/* ViewMap(Index, Index) overwrites rows/cols 
 		 * if they're known at compile time,
 		 * so we could pass any numbers. */
-		MapView(size, size)
+		ViewMap(size, size)
 	{
 		static_assert( std::is_same_v<P, EigenType_host> );
 	}
 
-	MapView( EigenType_host& hostObj ){
+	ViewMap( EigenType_host& hostObj ){
 		this->wrapOrAlloc(hostObj);
 	}
 
@@ -97,8 +97,8 @@ public:
 			!std::is_const_v<EigenType_host> &&
 			!is_eigen_map_v<std::remove_const_t<EigenType_host>>
 		){
-			/* If the MapView was given a (non-const) object on construction,
-			 * then MapView::resize should be the correct way to resize both,
+			/* If the ViewMap was given a (non-const) object on construction,
+			 * then ViewMap::resize should be the correct way to resize both,
 			 * because the Eigen object and Kokkos::View don't know about each 
 			 * other - i.e. there is no other non-manual way.
 			 */
@@ -238,13 +238,13 @@ public:
 
 	/**
 	 * @brief Returns an Eigen::Map
-	 * to memory on the MapView's \a target 
+	 * to memory on the ViewMap's \a target 
 	 * (Target::host or Target::device).
 	 * 
-	 * This represents the core functionality of an MapView,
+	 * This represents the core functionality of an ViewMap,
 	 * because this Eigen::Map can be used in any Eigen operation.
 	 * 
-	 * If the MapView was initialised with an Eigen object \a obj and
+	 * If the ViewMap was initialised with an Eigen object \a obj and
 	 * \a target == Target::host, then the Eigen::Map uses the same data 
 	 * as that \a obj.
 	 * Otherwise, it uses data of a managed Kokkos::View.
@@ -264,7 +264,7 @@ public:
 
 	/**
 	 * @brief Returns the stored Kokkos::View. 
-	 * If the MapView was initialised with an Eigen object \a obj,
+	 * If the ViewMap was initialised with an Eigen object \a obj,
 	 * this returns an unmanaged View with the same data pointer as \a obj.
 	 * Otherwise, it returns a managed view, whose memory space is
 	 * Kokkos::DefaultExecutionSpace, if \a target == Target::device, and
@@ -293,29 +293,29 @@ public:
 	}
 };
 
-// static_assert( std::is_trivially_copyable_v<MapView<ArrayXXs, Target::device>> );
+// static_assert( std::is_trivially_copyable_v<ViewMap<ArrayXXs, Target::device>> );
 
 template<typename T>
-struct is_MapView : std::false_type {};
+struct is_ViewMap : std::false_type {};
 
 template<typename EigenType, Target target>
-struct is_MapView<MapView<EigenType, target>> : std::true_type {};
+struct is_ViewMap<ViewMap<EigenType, target>> : std::true_type {};
 
 template<typename T>
-inline constexpr bool is_MapView_v = is_MapView<T>::value;
+inline constexpr bool is_MapView_v = is_ViewMap<T>::value;
 
 template<Target target = DefaultTarget, typename EigenType>
 std::enable_if_t<
 	std::is_base_of_v<Eigen::DenseBase<EigenType>, EigenType>,
-	MapView<EigenType, target>
+	ViewMap<EigenType, target>
 >
-mapView( EigenType& eigenObj ){
+viewMap( EigenType& eigenObj ){
 	return {eigenObj};
 }
 
 #define KOKKIDIO_MAPVIEW_FACTORY \
 template<typename EigenType, Target target = DefaultTarget> \
-MapView<EigenType, target> mapView
+ViewMap<EigenType, target> viewMap
 
 KOKKIDIO_MAPVIEW_FACTORY(){ return {}; }
 KOKKIDIO_MAPVIEW_FACTORY(Index vectorSize){ return {vectorSize}; }

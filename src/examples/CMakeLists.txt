@@ -22,10 +22,10 @@ include_directories(
 	"${CMAKE_SOURCE_DIR}/../../lib"
 )
 
-add_executable(mapview MapView.cpp)
+add_executable(viewmap ViewMap.cpp)
 
-configure(mapview)
+configure(viewmap)
 
-add_executable(dualmapview DualMapView.cpp)
+add_executable(dualviewmap DualViewMap.cpp)
 
-configure(dualmapview)
+configure(dualviewmap)

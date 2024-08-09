@@ -5,7 +5,7 @@
 #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
 #endif
 
-#include "Kokkidio/MapView.hpp"
+#include "Kokkidio/ViewMap.hpp"
 #include "Kokkidio/IndexRange.hpp"
 
 #include <memory>

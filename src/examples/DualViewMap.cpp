@@ -23,16 +23,16 @@ int main(int argc, char** argv){
 	/* By default, when initialising with an Eigen object,
 	 * the object's data is copied to the target. 
 	 * This behaviour be changed with an optional parameter: DontCopyToTarget */
-	DualMapView d1 {eigenArray};
-	auto d2 = dualMapView(eigenArray, DontCopyToTarget);
-	/* Otherwise, a DualMapView can be created in exactly the same ways as a 
-	 * MapView, so please refer to MapView.cpp for more examples. */
+	DualViewMap d1 {eigenArray};
+	auto d2 = dualViewMap(eigenArray, DontCopyToTarget);
+	/* Otherwise, a DualViewMap can be created in exactly the same ways as a 
+	 * ViewMap, so please refer to ViewMap.cpp for more examples. */
 
 
 	/*********************************************************/
-	/* Using DualMapView */
+	/* Using DualViewMap */
 	/*********************************************************/
-	/* with DualMapView, you can set your values on host, 
+	/* with DualViewMap, you can set your values on host, 
 	 * then copy them to the target: */
 	d2.map_host() = 123;
 	d2.copyToTarget();
