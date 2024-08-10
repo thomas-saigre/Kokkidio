@@ -29,7 +29,9 @@ toc::[]
 
 == Overview
 
-_Kokkidio_ consists of three interlocking elements:
+_Kokkidio_ 
+is built on top of both {kokkos} and {eigen}, and
+consists of three interlocking elements:
 
 * An iteration range class (`ParallelRange`), 
 which allows threads to efficiently access their assigned elements, 
@@ -38,11 +40,12 @@ compatible with functors taking `ParallelRange`, and
 * the <<_data_structures, data structures>> `ViewMap` and `DualViewMap`, 
 which combine an `Eigen::Map` and a `Kokkos::View`.
 
-It allows you to write code like this (see link:./src/examples/axpy.cpp[file]):
+It allows you to write code like this:
 
-.ViewMap construction, copying data, and SAXPY with Kokkidio
+.ViewMap construction, copying data, and example computation (SAXPY) with Kokkidio
 [%collapsible,id=kokkidio_ex]
 ====
+(taken from link:./src/examples/axpy.cpp[example/axpy.cpp])
 [,cpp]
 ----
 using namespace Kokkidio;
@@ -232,7 +235,8 @@ such as the SSE and AVX families on x86, ARM NEON, and others.
 
 == And why Kokkidio?
 
-There exist a number of problems when trying to use Eigen's functionality on GPUs,
+There exist a number of problems when trying to use Eigen's functionality on GPUs 
+(e.g. with Kokkos),
 which are detailed below -- and which _Kokkidio_ aims to address.
 
 === The problems
@@ -289,7 +293,7 @@ We're not using SAXPY, but instead multiply matrix columns,
 so that individual threads still use Eigen functionality.
 +
 .Multiply matrix columns (see link:./src/examples/dot.cpp[file])
-[%collapsible]
+[%collapsible, id=par_issue_eigen]
 ====
 [,cpp]
 ----
@@ -301,7 +305,10 @@ double result; // let's sum up the results to not need another array
 /* One could do a nested loop and manually implement the dot product.
  * We skip that here, because for that you wouldn't use Eigen */
 
-/* Instead, one could either distribute individual column-multiplications, 
+/******************************************************************************/
+/* OPTION 1, better on GPUs */
+/******************************************************************************/
+/* Distribute individual column-multiplications, 
  * as one might do on a GPU, if nCols >> nRows */
 result = 0;
 for (int i=0; i<nCols; ++i){
@@ -310,7 +317,10 @@ for (int i=0; i<nCols; ++i){
 	// result += a.col(i).dot( b.col(i) );
 }
 
-/* Or, one could distribute blocks of the matrices to threads and let Eigen
+/******************************************************************************/
+/* OPTION 2, better on CPUs */
+/******************************************************************************/
+/* Distribute blocks of the matrices to threads and let Eigen
  * handle the loop over columns, as may be preferable on a CPU.
  * This can be a lot faster, as it allows Eigen to vectorise the operation. */
 result = 0;
@@ -337,13 +347,61 @@ _Kokkidio_ solves the first issue of Eigen's data structures
 not being compatible with GPU programming models by 
 wrapping a `Kokkos::View` in a class called `ViewMap`.
 It provides access to the contained `Kokkos::View`, 
-but additionally uses Eigen's {maplink}[`Map`] feature 
+and additionally uses Eigen's {maplink}[`Map`] feature 
 to allow the contained data to be treated like an `Eigen` object --
 even on GPUs. More detail is provided in the section <<_data_structures>>.
 
-As long as Eigen's functionality  abstraction is still useful
+To address the issues regarding parallelism, vectorisation, and readability,
+_Kokkidio_ provides 
+an iteration range class and parallel dispatch functions compatible with it.
+These are detailed in the next section.
+
+// an iteration range class, 
+// combined with parallel dispatch functions which use that class.
+// The class is called `ParallelRange` 
+// and its behaviour is specialised depending on the execution target (CPU/GPU).
+// When applying a `ParallelRange` (i.e., its `operator()`) to a `ViewMap`,
+// the return object represents the data of that `ViewMap` 
+// associated with the calling thread: 
+// an individual element or column on a GPU,
+// and a segment or block on a CPU.
+// See its <<_parrange, dedicated section>> for more details.
+// This arrangement makes reading and writing parallel code much easier,
+// while also providing performance benefits on CPUs:
+// There, it allows for proper vectorisation, 
+// thus speeding up many operations significantly.
+// On a GPU, it constitutes a zero-overhead abstraction instead.
+
+// The parallel dispatch functions
+
 
 == Parallel dispatch and the `ParallelRange` class
+[id=_parrange]
+
+The class template `ParallelRange` fulfils two functions:
+Firstly, it contains the index or index range associated with a thread,
+and secondly, when applied to an Eigen object or `(Dual)ViewMap`,
+returns the data at that index or index range as an `Eigen::Block` expression.
+
+Its template parameter `target` can take either of 
+the two values of the `Target` enumeration, 
+// which can be either 
+`host` (CPU) or `device` (e.g., GPU):
+
+* When `target==device`, then `ParallelRange` stores a single index. 
+Applying it to an Eigen object or `(Dual)ViewMap` 
+returns either a single element, if that object is one-dimensional,
+or a column expression, if that object is two-dimensional.
+By default, 
+https://eigen.tuxfamily.org/dox/group__TopicStorageOrders.html[Eigen objects are column-major],
+which is the reason behind this choice.
+
+* When `target==host`, then `ParallelRange` stores 
+a starting index and number of elements.
+Applying it to an Eigen object or `(Dual)ViewMap`
+then returns a contiguous block of elements, 
+using `Eigen::segment` on 1D objects, and `Eigen::middleCols` on 2D objects.
+
 
 Using Kokkos' 
 https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/ParallelDispatch.html[parallel dispatch]
@@ -363,6 +421,33 @@ Kokkos::parallel_for( size, KOKKOS_LAMBDA(int i){ // i is our iteration variable
 ----
 ====
 
+
+On a GPU, this is 
+a single element of a 1D array/vector, or
+a single column of a 2D array/matrix.
+On a CPU
+
+== Parallel dispatch
+[id=_parfor]
+
+_Kokkidio_ provides drop-in replacements for Kokkos' parallel dispatch functions:
+
+* `parallel_for`, for general tasks, and
+* `parallel_reduce`, for reductions.
+
+The main difference to their Kokkos equivalents is, 
+that they allow passing a functor which takes a `ParallelRange` as its 
+(first) argument. 
+On the host (CPU), this leads to a different execution path,
+as here, parallel execution with a `ParallelRange` functor always uses OpenMP.
+If a different functor is provided, they forward to their Kokkos equivalents.
+
+
+On host, parallel execution generally uses OpenMP, 
+because of its wide availability and compatibility.
+
+Kokkos' functions, if the functor passed to them takes a
+`ParallelRange` as its argument. Otherwise, it forwards to Kokkos' functions.
 
 
 == Data structures
