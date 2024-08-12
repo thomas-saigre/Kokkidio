@@ -6,18 +6,24 @@ echo -n "Synopsis:
   <subject>             : Specifies what to build. Can be
                           \"kokkidio\" (default),
                           \"examples\",
-                          \"tests\", or
-                          \"kokkos\".
+                          \"tests\",
+                          \"kokkos\", or
+                          \"eigen\".
   kokkidio              : Build Kokkidio. Requires Eigen and Kokkos to be 
                           available via CMake's find_package.
   examples              : Build Kokkidio example executables. Requires Kokkidio
                           to be built first.
   tests                 : Build the Kokkidio tests.
-  kokkos                : Convenience option to let this script build Kokkos.
+  kokkos,eigen          : Convenience option to let this script build 
+                          Kokkos or Eigen.
                           Requires setting the environment variable 
-                          Kokkos_SRC
-                          to the directory containing the Kokkos source files.
-                          You may use env/env_tpl.sh for this.
+                          Kokkos_SRC or Eigen_SRC
+                          to the directory containing the respective source files.
+                          You may use env/nodes/<your_node_file>.sh for this.
+                          If this is the target machine, the node file name is
+                          ${node_name}.sh
+                          When combined with option -d/--download,
+                          downloads the source files first (requires git).
   -h, --help            : Show options.
   -b, --backend         : Set backend. Valid options are
                           \"cuda\", \"hip\", \"sycl\", \"ompt\", and \"all\".
@@ -28,6 +34,7 @@ echo -n "Synopsis:
   -c, --compile-only,   : Don't execute after compilation. Useful when
       --no-run            compilation and execution occur on separate systems.
                           Only affects tests.
+  -d, --download        : Download component, i.e. Kokkos or Eigen. Requires git.
   -n, --no-compilation, : Configuration only, no compilation. Excludes option
       --no-compile        --install.
                           Applicable to Kokkos and Kokkidio tests.
@@ -60,6 +67,7 @@ backend="default"
 whichScalar="all"
 whichBuildtype="all"
 install_opt="false"
+download_opt="false"
 install_prefix=""
 
 check_backend () {
@@ -131,6 +139,10 @@ while [ : ]; do
 			echo "Build type: \"$2\"."
 			shift 2
 			;;
+		-d | --download)
+			download_opt=true
+			shift 1
+			;;
 		-i | --install)
 			install_opt=true
 			shift 1
@@ -164,6 +176,7 @@ buildKokkidio=false
 buildTests=false
 buildExamples=false
 buildKokkos=false
+buildEigen=false
 
 for subj in "${subjects[@]}"; do
 	case "$subj" in
@@ -178,6 +191,9 @@ for subj in "${subjects[@]}"; do
 			;;
 		"kokkos")
 			buildKokkos=true
+			;;
+		"eigen")
+			buildEigen=true
 			;;
 		*)
 			echo "Unknown subject: \"${subj}\""

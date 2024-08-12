@@ -10,6 +10,7 @@ node_name=$(uname -n)
 env_dir="${sd}/env"
 
 source "${sd}/scripts/build_parseOpts.sh"
+source "${sd}/scripts/build_download.sh"
 
 
 # copied from oneapi
@@ -30,8 +31,6 @@ make_title () {
 	echo "----------------"
 }
 
-# cmakeFlags=""
-
 set_vars () {
 	local buildtype=$1
 
@@ -46,8 +45,22 @@ set_vars () {
 
 	source "$env_dir/node_patterns.sh"
 	nodefile="$env_dir/nodes/${node_name}.sh"
-	source "$nodefile"
-	# source "$env_dir/env_tpl.sh"
+	if [ -f "$nodefile" ]; then
+		source "$nodefile"
+	else
+		printf '%s \n%s \n%s %s \n%s' \
+			"Could not find node file to set machine-specific variables." \
+			"Creating default node file: " "$nodefile" \
+			"In that file, you must at least specify the default backend," \
+			"and the target architecture." \
+			"Rerun this script afterwards. Exiting..."
+		cp "$sd/scripts/nodefile_base.sh" "$nodefile"
+	fi
+
+	if [[ $download_opt == true ]]; then
+		download
+	fi
+
 	if [[ "$backend" == "default" ]]; then
 		if [ -n "${backend_default+x}" ]; then
 			backend=$backend_default
@@ -61,49 +74,6 @@ set_vars () {
 		fi
 	fi
 	echo "Using backend: $backend"
-
-	if [ ! -n "${Kokkos_SRC+x}" ]; then
-		echo "Kokkos source directory not specified."
-		printf '%s%s\n' \
-			"Please set the environment variable \"Kokkos_SRC\" " \
-			"to the Kokkos source directory!"
-		exit
-	fi
-
-	local kk_testfile="$Kokkos_SRC/cmake/KokkosConfig.cmake.in"
-
-	if [ -f "$kk_testfile" ]; then
-		echo "Kokkos source dir: $Kokkos_SRC"
-	else
-		echo "Could not find test file: $kk_testfile"
-		exit
-	fi
-
-	if [[ $install_prefix != "" ]]; then
-		echo $install_prefix
-		if [[ $buildKokkos == true ]]; then
-			if [[ $buildKokkidio != true ]]; then
-				if [ -n "${Kokkos_INST+x}" ]; then
-					printf '%s \n%s \n%s \n%s \n%s \n' \
-						"Found both environment variable " \
-						"	Kokkos_INST=$Kokkos_INST" \
-						"and command line option " \
-						"	--prefix=$install_prefix." \
-						"Command line option takes precedence."
-				fi
-				Kokkos_INST="$install_prefix"
-			else
-				echo "Using --prefix=$install_prefix as install prefix for Kokkidio."
-				Kokkidio_INST="$install_prefix"
-			fi
-		fi
-	else
-		Kokkidio_INST=""
-	fi
-
-	Kokkidio_ROOT="${Kokkidio_INST:-$sd/_install}/${backend}/$buildtype"
-	Kokkos_BUILD="${Kokkos_BUILD:-$Kokkos_SRC/_build}/${backend}/$buildtype"
-	Kokkos_ROOT="${Kokkos_INST:-$Kokkos_SRC/_install}/${backend}/$buildtype"
 }
 
 set_gpu_arch() {
@@ -174,6 +144,49 @@ build_kokkos () {
 	local buildtype=$1
 
 	make_title "Building Kokkos for ${backend^^}, build type \"$buildtype\"."
+
+	local kk_testfile="$Kokkos_SRC/cmake/KokkosConfig.cmake.in"
+
+	if [ -f "$kk_testfile" ]; then
+		echo "Kokkos source dir: $Kokkos_SRC"
+	else
+		echo "Could not find test file: $kk_testfile"
+		exit
+	fi
+
+	if [ ! -n "${Kokkos_SRC+x}" ]; then
+		echo "Kokkos source directory not specified."
+		printf '%s%s\n' \
+			"Please set the environment variable \"Kokkos_SRC\" " \
+			"to the Kokkos source directory!"
+		exit
+	fi
+
+	if [[ $install_prefix != "" ]]; then
+		echo $install_prefix
+		if [[ $buildKokkos == true ]]; then
+			if [[ $buildKokkidio != true ]]; then
+				if [ -n "${Kokkos_INST+x}" ]; then
+					printf '%s \n%s \n%s \n%s \n%s \n' \
+						"Found both environment variable " \
+						"	Kokkos_INST=$Kokkos_INST" \
+						"and command line option " \
+						"	--prefix=$install_prefix." \
+						"Command line option takes precedence."
+				fi
+				Kokkos_INST="$install_prefix"
+			else
+				echo "Using --prefix=$install_prefix as install prefix for Kokkidio."
+				Kokkidio_INST="$install_prefix"
+			fi
+		fi
+	else
+		Kokkidio_INST=""
+	fi
+
+	Kokkidio_ROOT="${Kokkidio_INST:-$sd/_install}/${backend}/$buildtype"
+	Kokkos_BUILD="${Kokkos_BUILD:-$Kokkos_SRC/_build}/${backend}/$buildtype"
+	Kokkos_ROOT="${Kokkos_INST:-$Kokkos_SRC/_install}/${backend}/$buildtype"
 
 	set_kokkos_targets "$backend"
 	cmakeFlags+=" -DKokkos_ENABLE_OPENMP=ON"
