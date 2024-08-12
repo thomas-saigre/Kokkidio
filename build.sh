@@ -12,131 +12,48 @@ env_dir="${sd}/env"
 source "${sd}/scripts/build_parseOpts.sh"
 source "${sd}/scripts/build_func.sh"
 
+read_nodefile
+download_libs
+# exit
+
+# check_install_prefix () {
+
+# 	if [ -n $install_prefix ]; then
+# 		echo "Install prefix: \"$install_prefix\""
+# 		if [[ $buildLib == true ]]; then
+# 			if [[ $buildKokkidio != true ]]; then
+# 				if [ -n "${Kokkos_INST+x}" ]; then
+# 					printf '%s \n%s \n%s \n%s \n%s \n' \
+# 						"Found both environment variable " \
+# 						"	Kokkos_INST=$Kokkos_INST" \
+# 						"and command line option " \
+# 						"	--prefix=$install_prefix." \
+# 						"Command line option takes precedence."
+# 				fi
+# 				Kokkos_INST="$install_prefix"
+# 			else
+# 				echo "Using --prefix=$install_prefix as install prefix for Kokkidio."
+# 				Kokkidio_INST="$install_prefix"
+# 			fi
+# 		fi
+# 	else
+# 		Kokkidio_INST=""
+# 	fi
+# }
+
 set_vars () {
 	local buildtype=$1
 
-	# reset cmakeFlags between runs/backends etc.
-	cmakeFlags=""
-	cmakeFlags+=" -DCMAKE_BUILD_TYPE=$buildtype"
-	# cmakeFlags+=" -DCMAKE_CXX_STANDARD=17"
-	# Kokkos otherwise emits a warning
-	cmakeFlags+=" -DCMAKE_CXX_EXTENSIONS=OFF"
+	reset_cmake_flags
+	set_backend
 
-	echo "Retrieving system-specific variables from \"${env_dir}\" ..."
+	check_kokkos_src
 
-	source "$env_dir/node_patterns.sh"
-	nodefile="$env_dir/nodes/${node_name}.sh"
-	if [ -f "$nodefile" ]; then
-		source "$nodefile"
-	else
-		printf '%s \n%s \n%s %s \n%s' \
-			"Could not find node file to set machine-specific variables." \
-			"Creating default node file: " "$nodefile" \
-			"In that file, you must at least specify the default backend," \
-			"and the target architecture." \
-			"Rerun this script afterwards. Exiting..."
-		cp "$sd/scripts/nodefile_base.sh" "$nodefile"
-	fi
-
-	if [[ $download_opt == true ]]; then
-		download
-	fi
-
-	if [ ! -n "${Kokkos_SRC+x}" ]; then
-		echo "Kokkos source directory not specified."
-		printf '%s%s\n' \
-			"Please set the environment variable \"Kokkos_SRC\" " \
-			"to the Kokkos source directory!"
-		exit
-	fi
-
-	local kk_testfile="$Kokkos_SRC/cmake/KokkosConfig.cmake.in"
-
-	if [ -f "$kk_testfile" ]; then
-		echo "Kokkos source dir: $Kokkos_SRC"
-	else
-		echo "Could not find test file: $kk_testfile"
-		exit
-	fi
-
-	if [[ $install_prefix != "" ]]; then
-		echo $install_prefix
-		if [[ $buildKokkos == true ]]; then
-			if [[ $buildKokkidio != true ]]; then
-				if [ -n "${Kokkos_INST+x}" ]; then
-					printf '%s \n%s \n%s \n%s \n%s \n' \
-						"Found both environment variable " \
-						"	Kokkos_INST=$Kokkos_INST" \
-						"and command line option " \
-						"	--prefix=$install_prefix." \
-						"Command line option takes precedence."
-				fi
-				Kokkos_INST="$install_prefix"
-			else
-				echo "Using --prefix=$install_prefix as install prefix for Kokkidio."
-				Kokkidio_INST="$install_prefix"
-			fi
-		fi
-	else
-		Kokkidio_INST=""
-	fi
+	# check_install_prefix
 
 	Kokkidio_ROOT="${Kokkidio_INST:-$sd/_install}/${backend}/$buildtype"
-	Kokkos_BUILD="${Kokkos_BUILD:-$Kokkos_SRC/_build}/${backend}/$buildtype"
-	Kokkos_ROOT="${Kokkos_INST:-$Kokkos_SRC/_install}/${backend}/$buildtype"
-
-	if [[ "$backend" == "default" ]]; then
-		if [ -n "${backend_default+x}" ]; then
-			backend=$backend_default
-		else
-			printf '%s \n%s %s' \
-				"Backend not specified and backend_default not defined." \
-				"Please either specify backend as command line option," \
-				"or set the variable \"backend_default\" in $nodefile."
-			print_help
-			exit
-		fi
-	fi
-	echo "Using backend: $backend"
-}
-
-set_gpu_arch() {
-	local required=${1:-false}
-	if [ -n "${Kokkos_ARCH+x}" ]; then
-		cmakeFlags+=" -D${Kokkos_ARCH}=ON"
-		# Kokkos requires this for SYCL
-		if [[ "$backend" == "sycl" ]]; then
-			cmakeFlags+=" -DKokkos_ENABLE_UNSUPPORTED_ARCHS=ON"
-		fi
-	else
-		local arch_help=$(printf '%s\n%s\n%s\n' \
-			"Kokkos_ARCH=Kokkos_ARCH_<specifier>" \
-			"You can find the specifiers here:" \
-			"https://kokkos.org/kokkos-core-wiki/keywords.html#architectures" \
-		)
-		if [[ $required == true ]]; then
-			echo "Please specify the GPU architecture in $nodefile as"
-			echo "$arch_help"
-			exit
-		else
-			echo "No GPU architecture specified, falling back to autodetection."
-			echo "You may explicitly specify the GPU architecture in $nodefile using"
-			echo "$arch_help"
-		fi
-	fi
-}
-
-set_kokkos_targets () {
-	# translate to Kokkos naming
-	if [[ $backend == "ompt" ]]; then
-		local kokkos_backend="openmptarget"
-	else
-		local kokkos_backend="$backend"
-	fi
-
-	if [[ ! $backend =~ cpu ]]; then
-		cmakeFlags+=" -DKokkos_ENABLE_${kokkos_backend^^}=ON"
-	fi
+	# Kokkos_BUILD="${Kokkos_BUILD:-$Kokkos_SRC/_build}/${backend}/$buildtype"
+	# Kokkos_ROOT="${Kokkos_INST:-$Kokkos_SRC/_install}/${backend}/$buildtype"
 }
 
 build_kokkos () {
@@ -144,10 +61,16 @@ build_kokkos () {
 
 	make_title "Building Kokkos for ${backend^^}, build type \"$buildtype\"."
 
-	set_kokkos_targets "$backend"
+	check_kokkos_src
+	set_kokkos_targets $backend
+	set_kokkos_root $buildtype
+	Kokkos_BUILD="${Kokkos_BUILD:-$Kokkos_SRC/_build}/${backend}/$buildtype"
+
+	reset_cmake_flags
+
 	cmakeFlags+=" -DKokkos_ENABLE_OPENMP=ON"
 	cmakeFlags+=" -DKokkos_ENABLE_AGGRESSIVE_VECTORIZATION=ON"
-	if [[ "$backend" == "cuda" ]]; then
+	if [[ $backend =~ cuda|hip ]]; then
 		set_gpu_arch $backend true
 		cmakeFlags+=" -DKokkos_ENABLE_CUDA_CONSTEXPR=ON"
 		cmakeFlags+=" -DKokkos_ENABLE_CUDA_LAMBDA=ON"
@@ -159,20 +82,14 @@ build_kokkos () {
 	build_cmake "$Kokkos_BUILD" "$Kokkos_SRC" "$Kokkos_ROOT"
 }
 
-check_kokkos_build () {
-	echo "Checking Kokkos build..."
-	local kk_testfile_tail="cmake/Kokkos/KokkosConfig.cmake"
-	for subdir in lib lib64; do
-		local kk_testfile="$Kokkos_ROOT/$subdir/$kk_testfile_tail"
-		echo "Checking for Kokkos cmake config \"$kk_testfile\"..."
-		if [ -f "$kk_testfile" ]; then
-			echo "Kokkos_ROOT dir: $Kokkos_ROOT"
-			return
-		fi
-	done
+build_eigen () {
+	make_title "Building Eigen."
 
-	echo "Could not find Kokkos cmake config file! Did you install after building?"
-	exit
+	check_eigen_src
+	set_eigen_root
+	reset_cmake_flags
+
+	build_cmake "$Eigen_ROOT" "$Eigen_SRC"
 }
 
 build_kokkidio () {
@@ -180,8 +97,11 @@ build_kokkidio () {
 
 	make_title "Configuring Kokkidio for ${backend^^}, build type \"$buildtype\"."
 
+	check_kokkos_install $buildtype
+	set_kokkos_targets $backend
+	set_kokkos_root $buildtype
+
 	builddir="_build/kokkidio/$backend/$buildtype"
-	set_kokkos_targets "$backend"
 	cmakeFlags+=" -DKokkos_ROOT=$Kokkos_ROOT"
 
 	echo "Running build commands..."
@@ -269,11 +189,10 @@ build_backend () {
 			build_kokkos $buildtype
 		fi
 		if [[ $buildKokkidio == true ]]; then
-			check_kokkos_build $buildtype
 			build_kokkidio $buildtype
 		fi
 		if [[ $buildTests == true ]]; then
-			check_kokkos_build $buildtype
+			check_kokkos_install $buildtype
 			for sc in float double; do
 				if ! [[ $whichScalar =~ all|$sc ]]; then
 					continue
@@ -282,12 +201,13 @@ build_backend () {
 			done
 		fi
 		if [[ $buildExamples == true ]]; then
-			check_kokkos_build $buildtype
+			check_kokkos_install $buildtype
 			build_examples $buildtype
 		fi
 	done
 	echo "Finished compilation(s) for ${backend^^}."
 }
+
 
 if [[ "$backend" == "all" ]]; then
 	for b in cuda hip ompt sycl cpu_gcc; do
@@ -297,3 +217,5 @@ if [[ "$backend" == "all" ]]; then
 else
 	build_backend
 fi
+
+

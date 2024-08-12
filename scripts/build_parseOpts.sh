@@ -109,7 +109,7 @@ while [ : ]; do
 			shift 2
 			;;
 		-p | --prefix)
-			if [ "$2" = /* ]; then
+			if [[ $2 =~ /* ]]; then
 				install_prefix="$(pwd)/$2"
 			else
 				install_prefix="$2"
@@ -177,22 +177,35 @@ buildExamples=false
 buildKokkos=false
 buildEigen=false
 
+buildLib=false
+buildSingle=true
+firstSubj=true
+
 for subj in "${subjects[@]}"; do
+	if [[ $firstSubj != true ]]; then
+		buildSingle=false
+	fi
 	case "$subj" in
+		"kokkos" | "all")
+			buildKokkos=true
+			buildLib=true
+			firstSubj=false
+			;;
+		"eigen" | "all")
+			buildEigen=true
+			buildLib=true
+			firstSubj=false
+			;;
 		"kokkidio" | "all")
 			buildKokkidio=true
+			buildLib=true
+			firstSubj=false
 			;;
 		"examples" | "all")
 			buildExamples=true
 			;;
 		"tests" | "all")
 			buildTests=true
-			;;
-		"kokkos" | "all")
-			buildKokkos=true
-			;;
-		"eigen" | "all")
-			buildEigen=true
 			;;
 		*)
 			echo "Unknown subject: \"${subj}\""
@@ -202,8 +215,10 @@ for subj in "${subjects[@]}"; do
 	esac
 done
 
-if [[ $install_opt == true ]] && [[ $buildKokkidio != true ]] && [[ $buildKokkos != true ]]; then
-	echo "Tests cannot be installed. Ignoring options --install and --prefix."
+if [[ $install_opt == true ]] && [[ $buildLib != true ]]; then
+	printf '%s %s' \
+		"Only libraries can be installed." \
+		"Ignoring options -i/--install and -p/--prefix."
 fi
 
 printf 'Building: '

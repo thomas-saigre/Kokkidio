@@ -1,16 +1,19 @@
 
-set_if_defined(EIGEN_DIR EIGEN_ROOT)
+# set_if_defined(EIGEN_DIR EIGEN_ROOT)
 
-if(DEFINED EIGEN_DIR)
-	find_package(Eigen3 3.4 REQUIRED HINTS ${EIGEN_DIR})
-else()
-	find_package(Eigen3 3.4 REQUIRED NO_MODULE)
-	message(STATUS "If you wish to supply a different version of Eigen, "
-		"set the environment variable EIGEN_DIR to the path containing "
-		"\"Eigen3Config.cmake\" or \"eigen3-config.cmake\", e.g.\n"
-		"export EIGEN_DIR=$HOME/my_eigen/build"
-	)
-endif()
+# if(DEFINED EIGEN_DIR)
+# 	find_package(Eigen3 3.4 REQUIRED HINTS ${EIGEN_DIR})
+# else()
+# 	find_package(Eigen3 3.4 REQUIRED NO_MODULE)
+# 	message(STATUS "If you wish to supply a different version of Eigen, "
+# 		"set the environment variable EIGEN_DIR to the path containing "
+# 		"\"Eigen3Config.cmake\" or \"eigen3-config.cmake\", e.g.\n"
+# 		"export EIGEN_DIR=$HOME/my_eigen/build"
+# 	)
+# endif()
+
+set_if_defined(Eigen3_ROOT Eigen_ROOT)
+find_package(Eigen3 3.4 REQUIRED NO_MODULE)
 message(STATUS "Eigen library: ${Eigen3_DIR}")
 message(STATUS "Eigen version: ${Eigen3_VERSION}")
 
