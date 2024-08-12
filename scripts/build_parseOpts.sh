@@ -7,8 +7,9 @@ echo -n "Synopsis:
                           \"kokkidio\" (default),
                           \"examples\",
                           \"tests\",
-                          \"kokkos\", or
-                          \"eigen\".
+                          \"kokkos\",
+                          \"eigen\",
+                          or \"all\".
   kokkidio              : Build Kokkidio. Requires Eigen and Kokkos to be 
                           available via CMake's find_package.
   examples              : Build Kokkidio example executables. Requires Kokkidio
@@ -19,9 +20,7 @@ echo -n "Synopsis:
                           Requires setting the environment variable 
                           Kokkos_SRC or Eigen_SRC
                           to the directory containing the respective source files.
-                          You may use env/nodes/<your_node_file>.sh for this.
-                          If this is the target machine, the node file name is
-                          ${node_name}.sh
+                          You may use the node file for this (see bottom).
                           When combined with option -d/--download,
                           downloads the source files first (requires git).
   -h, --help            : Show options.
@@ -57,7 +56,7 @@ The default file for specifying machine-specific variables is:
 but this may be overriden in 
     <kokkidio>/env/node_patterns.sh
 When these variables are correctly configured, the following command builds all components:
-    ./build.sh -ic kokkos kokkidio examples tests
+    ./build.sh -cdi all
 "
 }
 
@@ -84,8 +83,8 @@ if [[ ${PIPESTATUS[0]} -ne 4 ]]; then
 	exit
 fi
 VALID_ARGS=$(getopt \
--o b:s:t:p:hinc \
---long help,backend:,scalar:,real:,prefix:,build-type:,install,no-compilation,no-compile,compile-only,no-run \
+-o b:s:t:p:cdhin \
+--long help,backend:,scalar:,real:,prefix:,build-type:,download,install,no-compilation,no-compile,compile-only,no-run \
 -- "$@")
 if [[ $? -ne 0 ]]; then
 	echo "getopt failed to parse arguments. Exiting..."
@@ -180,19 +179,19 @@ buildEigen=false
 
 for subj in "${subjects[@]}"; do
 	case "$subj" in
-		"kokkidio")
+		"kokkidio" | "all")
 			buildKokkidio=true
 			;;
-		"examples")
+		"examples" | "all")
 			buildExamples=true
 			;;
-		"tests")
+		"tests" | "all")
 			buildTests=true
 			;;
-		"kokkos")
+		"kokkos" | "all")
 			buildKokkos=true
 			;;
-		"eigen")
+		"eigen" | "all")
 			buildEigen=true
 			;;
 		*)

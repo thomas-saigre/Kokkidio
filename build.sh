@@ -10,26 +10,7 @@ node_name=$(uname -n)
 env_dir="${sd}/env"
 
 source "${sd}/scripts/build_parseOpts.sh"
-source "${sd}/scripts/build_download.sh"
-
-
-# copied from oneapi
-prepend_path() (
-	path_to_add="$1"
-	path_is_now="$2"
-
-	if [ "" = "${path_is_now}" ] ; then   # avoid dangling ":"
-		printf "%s" "${path_to_add}"
-	else
-		printf "%s" "${path_to_add}:${path_is_now}"
-	fi
-)
-
-make_title () {
-	echo "----------------"
-	echo "$1"
-	echo "----------------"
-}
+source "${sd}/scripts/build_func.sh"
 
 set_vars () {
 	local buildtype=$1
@@ -60,6 +41,49 @@ set_vars () {
 	if [[ $download_opt == true ]]; then
 		download
 	fi
+
+	if [ ! -n "${Kokkos_SRC+x}" ]; then
+		echo "Kokkos source directory not specified."
+		printf '%s%s\n' \
+			"Please set the environment variable \"Kokkos_SRC\" " \
+			"to the Kokkos source directory!"
+		exit
+	fi
+
+	local kk_testfile="$Kokkos_SRC/cmake/KokkosConfig.cmake.in"
+
+	if [ -f "$kk_testfile" ]; then
+		echo "Kokkos source dir: $Kokkos_SRC"
+	else
+		echo "Could not find test file: $kk_testfile"
+		exit
+	fi
+
+	if [[ $install_prefix != "" ]]; then
+		echo $install_prefix
+		if [[ $buildKokkos == true ]]; then
+			if [[ $buildKokkidio != true ]]; then
+				if [ -n "${Kokkos_INST+x}" ]; then
+					printf '%s \n%s \n%s \n%s \n%s \n' \
+						"Found both environment variable " \
+						"	Kokkos_INST=$Kokkos_INST" \
+						"and command line option " \
+						"	--prefix=$install_prefix." \
+						"Command line option takes precedence."
+				fi
+				Kokkos_INST="$install_prefix"
+			else
+				echo "Using --prefix=$install_prefix as install prefix for Kokkidio."
+				Kokkidio_INST="$install_prefix"
+			fi
+		fi
+	else
+		Kokkidio_INST=""
+	fi
+
+	Kokkidio_ROOT="${Kokkidio_INST:-$sd/_install}/${backend}/$buildtype"
+	Kokkos_BUILD="${Kokkos_BUILD:-$Kokkos_SRC/_build}/${backend}/$buildtype"
+	Kokkos_ROOT="${Kokkos_INST:-$Kokkos_SRC/_install}/${backend}/$buildtype"
 
 	if [[ "$backend" == "default" ]]; then
 		if [ -n "${backend_default+x}" ]; then
@@ -115,78 +139,10 @@ set_kokkos_targets () {
 	fi
 }
 
-build_cmake () {
-	local builddir="$1"
-	local srcdir="$2"
-	local instdir="${3:-""}"
-	echo "Build directory: $builddir"
-	echo "Source directory: $srcdir"
-	if [ -n "$instdir" ]; then
-		echo "Install directory: $instdir"
-		cmakeFlags+=" -DCMAKE_INSTALL_PREFIX=$instdir"
-	fi
-	echo "CMake flags: $cmakeFlags"
-	mkdir -p "$builddir"
-	cmake -B "$builddir" $cmakeFlags ${srcdir}
-
-	if [[ $noBuild == true ]]; then
-		echo "Build with \"cmake --build $builddir -j\""
-	else
-		echo "Building with CMake..."
-		cmake --build "$builddir" -j
-		if [[ $install_opt == true ]] && [[ $instdir != "" ]]; then
-			cmake --build "$builddir" -- install
-		fi
-	fi
-}
-
 build_kokkos () {
 	local buildtype=$1
 
 	make_title "Building Kokkos for ${backend^^}, build type \"$buildtype\"."
-
-	local kk_testfile="$Kokkos_SRC/cmake/KokkosConfig.cmake.in"
-
-	if [ -f "$kk_testfile" ]; then
-		echo "Kokkos source dir: $Kokkos_SRC"
-	else
-		echo "Could not find test file: $kk_testfile"
-		exit
-	fi
-
-	if [ ! -n "${Kokkos_SRC+x}" ]; then
-		echo "Kokkos source directory not specified."
-		printf '%s%s\n' \
-			"Please set the environment variable \"Kokkos_SRC\" " \
-			"to the Kokkos source directory!"
-		exit
-	fi
-
-	if [[ $install_prefix != "" ]]; then
-		echo $install_prefix
-		if [[ $buildKokkos == true ]]; then
-			if [[ $buildKokkidio != true ]]; then
-				if [ -n "${Kokkos_INST+x}" ]; then
-					printf '%s \n%s \n%s \n%s \n%s \n' \
-						"Found both environment variable " \
-						"	Kokkos_INST=$Kokkos_INST" \
-						"and command line option " \
-						"	--prefix=$install_prefix." \
-						"Command line option takes precedence."
-				fi
-				Kokkos_INST="$install_prefix"
-			else
-				echo "Using --prefix=$install_prefix as install prefix for Kokkidio."
-				Kokkidio_INST="$install_prefix"
-			fi
-		fi
-	else
-		Kokkidio_INST=""
-	fi
-
-	Kokkidio_ROOT="${Kokkidio_INST:-$sd/_install}/${backend}/$buildtype"
-	Kokkos_BUILD="${Kokkos_BUILD:-$Kokkos_SRC/_build}/${backend}/$buildtype"
-	Kokkos_ROOT="${Kokkos_INST:-$Kokkos_SRC/_install}/${backend}/$buildtype"
 
 	set_kokkos_targets "$backend"
 	cmakeFlags+=" -DKokkos_ENABLE_OPENMP=ON"
