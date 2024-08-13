@@ -10,7 +10,7 @@ macro(kokkidio_check_backend BACKEND_ARG KOKKIDIO_BACKEND_VAR)
 	if ("${BACKEND_ARG}" IN_LIST Kokkos_DEVICES)
 		set(${KOKKIDIO_BACKEND_VAR} ON)
 		set(KOKKIDIO_BACKEND ${KOKKIDIO_BACKEND_VAR})
-		message(STATUS "Backend: ${KOKKIDIO_BACKEND}")
+		message(STATUS "Device backend: ${KOKKIDIO_BACKEND}")
 	endif()
 endmacro()
 

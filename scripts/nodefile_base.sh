@@ -21,7 +21,8 @@ Kokkos_INST="$Kokkos_BASE/install"
 Eigen_BASE="$HOME/pkg/eigen"
 # only Eigen_SRC is required
 Eigen_SRC="$Eigen_BASE"
-# Eigen_BUILD and Eigen_INST are optional,
-# but may be used to specify build/install directories for Eigen.
+# As a pure header library, Eigen doesn't need to be compiled.
+# build and install directory can be the same, if you don't specifically wish 
+# for the headers to be copied to standard directories.
 Eigen_BUILD="$Eigen_BASE/build"
-Eigen_INST="$Eigen_BASE/install"
+# Eigen_INST="$Eigen_BASE/install"

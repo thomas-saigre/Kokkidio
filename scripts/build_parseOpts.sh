@@ -160,6 +160,15 @@ while [ : ]; do
 	esac
 done
 
+if [[ $noBuild == true ]] && [[ $install_opt == true ]]; then
+	printf '%s\n%s\n%s\n%s\n' \
+		"Conflicting options: " \
+		"    -n/--no-compile/--no-compilation, and " \
+		"    -i/--install" \
+		"Installation not possible before building." >&2
+	exit
+fi
+
 subjects=()
 
 if [ $# -eq 0 ]; then
@@ -186,25 +195,34 @@ for subj in "${subjects[@]}"; do
 		buildSingle=false
 	fi
 	case "$subj" in
-		"kokkos" | "all")
+		"all")
+			buildKokkidio=true
+			buildTests=true
+			buildExamples=true
+			buildKokkos=true
+			buildEigen=true
+			buildLib=true
+			buildSingle=false
+			;;
+		"kokkos")
 			buildKokkos=true
 			buildLib=true
 			firstSubj=false
 			;;
-		"eigen" | "all")
+		"eigen")
 			buildEigen=true
 			buildLib=true
 			firstSubj=false
 			;;
-		"kokkidio" | "all")
+		"kokkidio")
 			buildKokkidio=true
 			buildLib=true
 			firstSubj=false
 			;;
-		"examples" | "all")
+		"examples")
 			buildExamples=true
 			;;
-		"tests" | "all")
+		"tests")
 			buildTests=true
 			;;
 		*)
@@ -231,6 +249,16 @@ for subj in "${subjects[@]}"; do
 	printf '%s' $subj
 done
 printf '\n'
+
+
+# echo "buildKokkidio: $buildKokkidio"
+# echo "buildTests: $buildTests"
+# echo "buildExamples: $buildExamples"
+# echo "buildKokkos: $buildKokkos"
+# echo "buildEigen: $buildEigen"
+
+# echo "buildLib: $buildLib"
+# echo "buildSingle: $buildSingle"
 
 if [[ $whichBuildtype == "all" ]]; then
 	buildtypes=("Debug" "Release")
