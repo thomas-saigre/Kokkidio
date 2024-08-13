@@ -238,7 +238,8 @@ such as the SSE and AVX families on x86, ARM NEON, and others.
 
 There exist a number of problems when trying to use Eigen's functionality on GPUs 
 (e.g. with Kokkos),
-which are detailed below -- and which _Kokkidio_ aims to address.
+// which are detailed below -- and 
+which _Kokkidio_ aims to address.
 
 === The problems
 
@@ -389,8 +390,8 @@ These are detailed in the next section.
 The class template `ParallelRange` fulfils two functions:
 Firstly, 
 given some total number or range of items to be processed,
-it contains the index or index range associated with a thread,
-and secondly, when applied to an Eigen object or `(Dual)ViewMap`,
+it contains the index or index range associated with the executing thread,
+and secondly, when applied to an Eigen or `(Dual)ViewMap` object,
 returns the data at that index or index range as an `Eigen::Block` expression.
 
 Its template parameter `target` can take either of 
@@ -399,7 +400,7 @@ the two values of the `Target` enumeration,
 `host` (CPU) or `device` (e.g., GPU):
 
 * When `target==device`, then `ParallelRange` stores a single index. 
-Applying it to an Eigen object or `(Dual)ViewMap` 
+Applying it to an Eigen or `(Dual)ViewMap` object 
 returns either a single element, if the object is one-dimensional,
 or a column expression, if the object is two-dimensional.
 By default, 
@@ -924,17 +925,52 @@ DualViewMap<EigenType, target> dualViewMap(Index rows, Index cols);
 
 asdf
 
-== Notes
-
-=== CMake integration
+== Installation 
 
 The multi-backend nature of Kokkos and, by extension, _Kokkidio_, 
 makes the process of configuring and building them rather involved, 
-so we included a build script to help with this.
-// The first step to building _Kokkidio_ is to download and build Kokkos and Eigen.
+so we included the script link:./build.sh[`build.sh`] to help with this.
 
+=== CMake integration
 
-==== Building Kokkos for _Kokkidio_
+_Kokkidio_ creates a CMake configuration file, so that it can be found with
+
+[,cmake]
+----
+find_package(Kokkidio)
+----
+
+If you didn't install _Kokkidio_ in a standard directory, 
+then you need to provide the CMake or environment variable `Kokkidio_ROOT`.
+It must point to the installation directory, 
+i.e. the one containing the directories `include` and `lib`.
+
+Due to some trickery that _Kokkidio_ has to apply to source files,
+you need to use the function `kokkidio_configure_target` on your CMake targets,
+e.g.
+
+[,cmake]
+----
+cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
+
+project(MyProject)
+
+find_package(Kokkidio REQUIRED)
+
+add_executable(myTarget "")
+
+target_sources(myTarget PRIVATE 
+	myFile1.cpp
+	myFile2.cpp
+)
+
+# *after* adding source files to your target, configure it with Kokkidio
+kokkidio_configure_target(myTarget)
+----
+
+== Notes
+
+=== Building Kokkos for _Kokkidio_
 To achieve CPU parallelism with _Kokkidio_, 
 Kokkos should always be built with the OpenMP backend enabled, i.e.
 `KOKKOS_ENABLE_OPENMP=ON`.
@@ -1034,6 +1070,15 @@ set_is_cpu(source_host.cpp)
 kokkidio_configure_target(myTarget)
 ----
 ====
+
+=== CPU execution with SYCL
+
+SYCL, at least in its oneAPI flavour, 
+does not support parallel host execution on any non-Intel CPU.
+Therefore, _Kokkidio_ defaults to redirecting `parallel_for` calls 
+on `Target::host` to OpenMP. 
+This behaviour is controlled through the preprocessor symbol
+`KOKKIDIO_SYCL_DISABLE_ON_HOST`. 
 
 === Name and Logo
 
