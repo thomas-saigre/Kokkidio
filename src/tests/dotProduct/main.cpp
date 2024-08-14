@@ -70,8 +70,8 @@ void runDot(const BenchOpts b){
 			, uK::eigen_ranged
 			, uK::eigen_ranged_chunks
 			// , uK::eigen_ranged_for_each
-			, uK::eigen_colwise_merged
-			, uK::eigen_ranged_for_each_merged
+			// , uK::eigen_colwise_merged
+			// , uK::eigen_ranged_for_each_merged
 		>( opts, pass, m1, m2, b.nRuns );
 		#ifdef KOKKIDIO_USE_CUDAHIP
 		using gK = gpu::Kernel;
@@ -97,8 +97,8 @@ void runDot(const BenchOpts b){
 			, uK::eigen_ranged
 			, uK::eigen_ranged_chunks
 			// , uK::ranged_for_each
-			, uK::eigen_colwise_merged
-			, uK::eigen_ranged_for_each_merged
+			// , uK::eigen_colwise_merged
+			// , uK::eigen_ranged_for_each_merged
 		>( opts, pass, m1, m2, b.nRuns );
 
 		using cK = cpu::Kernel;
