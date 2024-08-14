@@ -109,6 +109,19 @@ public:
 		this->m_target.resize(rows, cols);
 	}
 
+	void resize(Index size){
+		static_assert(EigenType_host::IsVectorAtCompileTime);
+		this->m_host  .resize(size);
+		this->m_target.resize(size);
+	}
+
+	template<typename EigenObjOrView>
+	void resizeLike(const EigenObjOrView& obj){
+		this->m_host  .resizeLike(obj);
+		this->m_target.resizeLike(obj);
+		// this->resize( obj.rows(), obj.cols() );
+	}
+
 	KOKKOS_FUNCTION
 	bool isAlloc_host() const {
 		return this->m_host.isAlloc();

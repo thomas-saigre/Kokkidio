@@ -125,6 +125,16 @@ public:
 		}
 	}
 
+	void resize(Index size){
+		static_assert( EigenType_host::IsVectorAtCompileTime );
+		this->resize(size, size);
+	}
+
+	template<typename EigenObjOrView>
+	void resizeLike(const EigenObjOrView& obj){
+		this->resize( obj.rows(), obj.cols() );
+	}
+
 	KOKKOS_FUNCTION
 	constexpr bool isManaged() const {
 		/* The View is only unmanaged in one case:
@@ -160,15 +170,28 @@ protected:
 	void allocView(Index rows, Index cols){
 		this->adjustDims(rows, cols);
 		this->m_view = ViewType{
-			Kokkos::view_alloc(MemorySpace{}, Kokkos::WithoutInitializing, ""),
+			Kokkos::view_alloc(
+				MemorySpace{}, Kokkos::WithoutInitializing,
+				"ViewMap::allocView"
+			),
 			static_cast<std::size_t>(rows),
 			static_cast<std::size_t>(cols)
 		};
-		printd( "(%p) Allocating View with address, size %i x %i.\n"
+		printd( "(%p) Allocating View, on %cPU, size %i x %i.\n"
 			, (void*) this->m_view.data()
+			, target == Target::host ? 'C' : 'G'
 			, static_cast<int>( this->rows() )
 			, static_cast<int>( this->cols() )
 		);
+			if ( !this->m_view.is_allocated() ){
+				printd( "(%p) View not allocated, on %cPU, size %i x %i.\n"
+					, (void*) this->m_view.data()
+					, target == Target::host ? 'C' : 'G'
+					, static_cast<int>( this->rows() )
+					, static_cast<int>( this->cols() )
+				);
+			}
+		assert( this->isAlloc() );
 	}
 
 	void resizeView(Index rows, Index cols){
@@ -188,8 +211,9 @@ protected:
 
 	void wrapView(EigenType_host& hostObj ){
 		assert( !this->isManaged() );
-		printd( "(%p) Creating View from data pointer, with size %i x %i.\n"
+		printd( "(%p) Creating View from data pointer, target %cPU, size %i x %i.\n"
 			, (void*) hostObj.data()
+			, target == Target::host ? 'C' : 'G'
 			, static_cast<int>( hostObj.rows() )
 			, static_cast<int>( hostObj.cols() )
 		);
@@ -221,6 +245,16 @@ public:
 
 	KOKKOS_FUNCTION
 	bool isAlloc() const {
+		// #if defined(KOKKIDIO_DEBUG_OUTPUT)
+			// if ( !this->m_view.is_allocated() ){
+			// 	printd( "(%p) View not allocated, on %cPU, size %i x %i.\n"
+			// 		, (void*) this->m_view.data()
+			// 		, target == Target::host ? 'C' : 'G'
+			// 		, static_cast<int>( this->rows() )
+			// 		, static_cast<int>( this->cols() )
+			// 	);
+			// }
+		// #endif
 		return this->m_view.is_allocated();
 	}
 
@@ -258,7 +292,17 @@ public:
 		 * and thus a copy-capturing lambda will capture this class'
 		 * 'this' pointer as const.
 		 * */
-		assert( isAlloc() );
+
+			// if ( !this->isAlloc() ){
+			if ( !this->m_view.is_allocated() ){
+				printd( "(%p) View not allocated, on %cPU, size %i x %i.\n"
+					, (void*) this->m_view.data()
+					, target == Target::host ? 'C' : 'G'
+					, static_cast<int>( this->rows() )
+					, static_cast<int>( this->cols() )
+				);
+			}
+		// assert( this->isAlloc() );
 		return { this->m_view.data(), this->rows(), this->cols() };
 	}
 
