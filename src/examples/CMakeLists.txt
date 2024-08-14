@@ -23,16 +23,18 @@ include_directories(
 )
 
 add_executable(viewmap ViewMap.cpp)
-
 configure(viewmap)
 
 add_executable(dualviewmap DualViewMap.cpp)
-
 configure(dualviewmap)
 
-add_executable(dot dot.cpp)
-set_is_cpu(dot.cpp)
-configure(dot)
+add_executable(colmult_eigen colmult_eigen.cpp)
+set_is_cpu(colmult_eigen.cpp)
+configure(colmult_eigen)
+
+add_executable(colmult colmult.cpp)
+set_is_cpu(colmult.cpp)
+configure(colmult)
 
 add_executable(axpy axpy.cpp)
 configure(axpy)

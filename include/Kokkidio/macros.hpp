@@ -32,7 +32,7 @@
 #define _KOKKIDIO_TO_STRING(ARG) #ARG
 
 /* if KOKKIDIO_DEBUG_OUTPUT is defined, calls to printd(...) resolve to printf. */
-// #define KOKKIDIO_DEBUG_OUTPUT
+#define KOKKIDIO_DEBUG_OUTPUT
 
 /* if KOKKIDIO_DEBUG_OUTPUT_LOOP is defined, printdl resolves to printd. */
 // #define KOKKIDIO_DEBUG_OUTPUT_LOOP
