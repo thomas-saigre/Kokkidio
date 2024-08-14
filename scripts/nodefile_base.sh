@@ -10,7 +10,7 @@ backend_default=cuda
 Kokkos_ARCH=Kokkos_ARCH_SOMEVALUE
 
 # feel free to adjust this path to your liking
-Kokkos_BASE="$HOME/pkg/kokkos"
+Kokkos_BASE="./lib/kokkos"
 # only Kokkos_SRC is required
 Kokkos_SRC="$Kokkos_BASE/src/kokkos-dev"
 # Kokkos_BUILD and Kokkos_INST are optional,
@@ -18,7 +18,7 @@ Kokkos_SRC="$Kokkos_BASE/src/kokkos-dev"
 Kokkos_BUILD="$Kokkos_BASE/build"
 Kokkos_INST="$Kokkos_BASE/install"
 
-Eigen_BASE="$HOME/pkg/eigen"
+Eigen_BASE="./lib/eigen"
 # only Eigen_SRC is required
 Eigen_SRC="$Eigen_BASE"
 # As a pure header library, Eigen doesn't need to be compiled.

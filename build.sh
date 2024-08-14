@@ -41,7 +41,6 @@ build_backend () {
 			build_kokkidio $buildtype
 		fi
 		if [[ $buildTests == true ]]; then
-			check_kokkos_install true
 			for sc in float double; do
 				if ! [[ $whichScalar =~ all|$sc ]]; then
 					continue
@@ -50,7 +49,6 @@ build_backend () {
 			done
 		fi
 		if [[ $buildExamples == true ]]; then
-			check_kokkos_install true
 			build_examples $buildtype
 		fi
 	done

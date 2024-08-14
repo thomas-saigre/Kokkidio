@@ -32,7 +32,7 @@ read_nodefile () {
 			"Error: Could not find node file to set machine-specific variables." \
 			"Creating default node file: " \
 			"    $nodefile" \
-			"In that file, you must at least specify the default backend," \
+			"There, you must at least specify the default backend," \
 			"and the target architecture." \
 			"Rerun this script afterwards. Exiting..." >&2
 		cp "$sd/scripts/nodefile_base.sh" "$nodefile"
@@ -197,9 +197,9 @@ set_root () {
 
 set_eigen_root () {
 	if [ -n "${Eigen_ROOT+x}" ] || [ -n "${Eigen_SRC+x}" ]; then
-		Eigen_BUILD="${Eigen_BUILD:-$Eigen_SRC/build}"
-		Eigen_INST="${Eigen_INST:-$Eigen_BUILD}"
-		Eigen_ROOT="${Eigen_ROOT:-$Eigen_INST}"
+		# Eigen_BUILD="${Eigen_BUILD:-$Eigen_SRC/build}"
+		# Eigen_INST="${Eigen_INST:-$Eigen_BUILD}"
+		Eigen_ROOT="${Eigen_ROOT:-${Eigen_INST:-${Eigen_BUILD:-$Eigen_SRC/build}}}"
 	else
 		printf '%s\n%s\n%s\n%s\n' \
 			"Please define at least one of" \
