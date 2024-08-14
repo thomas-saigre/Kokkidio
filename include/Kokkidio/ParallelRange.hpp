@@ -56,7 +56,7 @@ protected:
 			}
 			#ifdef KOKKIDIO_DEBUG_OUTPUT
 			auto irng { toIndexRange(pol) };
-			printd(
+			printdl(
 				"Created ParallelRange from [%i, %i) (n=%i)\n"
 				"\t-> rng: [%i, %i) (n=%i)\n"
 				"\t-> chk: size=%i, n=%i\n"

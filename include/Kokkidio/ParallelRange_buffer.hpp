@@ -208,7 +208,7 @@ public:
 		#endif
 
 		// #ifndef __CUDACC__
-		printd(
+		printdl(
 			"(%p) HostBuffer::get: Thread #%i, mapping to view element...\n"
 			"\tView address range: %p - %p\n"
 			"\tView extents: (%lu, %lu, %lu)\n"
