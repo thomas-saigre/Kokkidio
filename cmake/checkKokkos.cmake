@@ -21,6 +21,13 @@ if (NOT DEFINED KOKKIDIO_BACKEND)
 	kokkidio_check_backend(SYCL KOKKIDIO_USE_SYCL)
 endif()
 
+if (NOT DEFINED Kokkos_ENABLE_OPENMP OR NOT Kokkos_ENABLE_OPENMP)
+	message(WARNING 
+		"For Kokkidio to work as intended, OpenMP must be enabled. "
+		"Consider rebuilding Kokkos with Kokkos_ENABLE_OPENMP"
+	)
+endif()
+
 if(KOKKIDIO_USE_CUDA)
 	message(STATUS "Enabling CUDA as CMake language...")
 	enable_language(CUDA)
