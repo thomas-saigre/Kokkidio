@@ -2,6 +2,7 @@
 // :author: Lennart Steffen
 // :email: Lennart.Steffen@wahyd.tu-berlin.de
 :source-highlighter: highlight.js
+:source-language: cpp
 :toc:
 :toc-placement!:
 
@@ -46,7 +47,6 @@ It allows you to write code like this:
 [%collapsible,id=kokkidio_ex]
 ====
 (taken from link:./src/examples/axpy.cpp[example/axpy.cpp])
-[,cpp]
 ----
 using namespace Kokkidio;
 float a {0.5};
@@ -108,7 +108,6 @@ Here's an example:
 .SAXPY with Kokkos
 [%collapsible,id=kokkos_ex]
 ====
-[,cpp]
 ----
 float a {0.5};
 std::size_t dim1 {10};
@@ -161,7 +160,6 @@ using their overloaded operators or member functions. Here's an example:
 // .Dot product in pure C++
 // [%collapsible,id=eigen_ex]
 // ====
-// [,cpp]
 // ----
 // std::size_t size {10};
 // std::vector<double> a {size}, b {size};
@@ -177,7 +175,6 @@ using their overloaded operators or member functions. Here's an example:
 // .Dot product in Eigen
 // [%collapsible]
 // ====
-// [,cpp]
 // ----
 // Eigen::Index size {10};
 // Eigen::VectorXd a {size}, b {size};
@@ -188,9 +185,8 @@ using their overloaded operators or member functions. Here's an example:
 
 
 .SAXPY in pure C++
-[%collapsible,id=eigen_ex]
+[%collapsible]
 ====
-[,cpp]
 ----
 std::size_t size {10};
 double a {0.5};
@@ -204,9 +200,8 @@ for (std::size_t i=0; i<size; ++i){
 ====
 
 .SAXPY in Eigen
-[%collapsible]
+[%collapsible,id=eigen_ex]
 ====
-[,cpp]
 ----
 Eigen::Index size {10};
 double a {0.5};
@@ -249,8 +244,8 @@ and its compatibility with SYCL is in a usable state since at least early 2024
 and under active development.
 However, only fixed-size objects can be created on GPUs -- 
 dynamically-sized data structures are only available on and from the host.
-There is the {maplink}[`Eigen::Map`] class, though, 
-with which other data structures can be treated like an Eigen object,
+There is the {maplink}[`Eigen::Map`] class, however, 
+through which other data structures can be treated like Eigen objects,
 if they expose a data pointer and their memory layout and stride(s) are known.
 
 . *Loop abstraction and parallelism 1* +
@@ -284,7 +279,7 @@ leads to many small units of work performing better.
 // a large number of small units of work perform better, 
 // while 
 By contrast, 
-on a CPU, fewer, larger, and contiguous chunks are preferable,
+on a CPU, fewer, larger, and contiguous chunks per thread are preferable,
 to allow for vectorised operations. 
 +
 // Let's use a (slightly) more involved example, 
@@ -297,8 +292,7 @@ so that individual threads still use Eigen functionality.
 .Multiply matrix columns
 [%collapsible, id=par_issue_eigen]
 ====
-(taken from link:./src/examples/dot.cpp[examples/dot.cpp])
-[,cpp]
+(taken from link:./src/examples/colmult_eigen.cpp[examples/colmult_eigen.cpp])
 ----
 int nRows {4}, nCols {1000};
 Eigen::MatrixXd a {nRows, nCols}, b;
@@ -359,11 +353,11 @@ _Kokkidio_ provides
 an iteration range class 
 called <<_parrange, `ParallelRange`>>
 and <<_parfor, parallel dispatch functions>> compatible with it.
-These are detailed in the next section.
+These are detailed in the <<_pardisp,next section>>.
 
 
-== Parallel dispatch
 [id=_pardisp]
+== Parallel dispatch
 
 
 // an iteration range class, 
@@ -384,8 +378,8 @@ These are detailed in the next section.
 
 // The parallel dispatch functions
 
-=== `ParallelRange`
 [id=_parrange]
+=== `ParallelRange`
 
 The class template `ParallelRange` fulfils two functions:
 Firstly, 
@@ -419,13 +413,12 @@ rather than `ParallelRange::operator()`.
 
 
 
-==== Synopsis
 [id=_parrange_syn]
+==== Synopsis
 
 .Expand synopsis of ParallelRange
 [%collapsible]
 ====
-[,cpp]
 ----
 
 template<Target _target = DefaultTarget>
@@ -498,8 +491,8 @@ void apply_range(Func&&, const ParallelRange<t>&, Ts&& ... args);
 ====
 
 
-=== Parallel dispatch functions
 [id=_parfor]
+=== Parallel dispatch functions
 
 _Kokkidio_ provides drop-in replacements for Kokkos' parallel dispatch functions:
 
@@ -510,7 +503,6 @@ The main difference to their Kokkos equivalents is,
 that they allow passing a functor which takes a `ParallelRange` as its 
 (first) argument, e.g.:
 
-[,cpp]
 ----
 parallel_for(someSizeOrPolicy, KOKKOS_LAMBDA(ParallelRange<target> rng){
 	/* do something with rng ... */
@@ -528,9 +520,72 @@ when applied to an Eigen or `(Dual)ViewMap` object,
 returns a contiguous `Eigen::Block` of data, corresponding to the index range.
 
 If a functor is provided that does not take a `ParallelRange` as its parameter,
-_Kokkidio_'s parallel dispatch functions simply forward to their Kokkos equivalent.
+_Kokkidio_'s parallel dispatch functions 
+simply forward to their Kokkos equivalent 
+(except for <<_syclcpu>>).
 
 ==== Examples
+
+.`parallel_for`
+[%collapsible,id=parfor_ex]
+====
+(shortened from example in <<kokkidio_ex, in overview>>)
+----
+using namespace Kokkidio;
+float a {0.5};
+int size {1000};
+
+/* create and set the input (x, y) and output (z) arrays */
+using FloatArray = DualViewMap<Eigen::ArrayXf>;
+FloatArray x {size}, y {size}, z {size};
+
+x.map_host().setRandom();
+y.map_host().setRandom();
+
+x.copyToTarget();
+y.copyToTarget();
+
+/* perform parallel computation (1D) */
+parallel_for( size, KOKKOS_LAMBDA(ParallelRange<> rng){
+	rng(z) = a * rng(x) + rng(y);
+});
+
+/* Copy the results back to host */
+z.copyToHost();
+----
+====
+
+.`parallel_reduce`
+[%collapsible,id=parreduce_ex]
+====
+(taken from link:./src/examples/colmult.cpp[examples/colmult.cpp],
+see also <<par_issue_eigen>>)
+----
+using namespace Kokkidio;
+int nRows {4}, nCols {1000};
+
+/* create and set the input matrices */
+using MatrixView = DualViewMap<Eigen::MatrixXd>;
+MatrixView a {nRows, nCols}, b;
+b.resizeLike(a);
+
+a.map_host().setRandom();
+b.map_host().setRandom();
+
+a.copyToTarget();
+b.copyToTarget();
+
+double result_g = 0;
+/* perform parallel computation and reduction (2D -> column range) */
+parallel_reduce( a.cols(),
+	KOKKOS_LAMBDA(ParallelRange<> rng, double& result_l){
+	result_l += ( rng(a).transpose() * rng(b) ).trace(); // trace = sum of the diagonal
+	/* equivalent: sum of coefficient-wise products */
+	result_l += ( rng(a).array() * rng(b).array() ).sum();
+}, redux::sum(result_g) );
+----
+====
+
 
 == Data structures
 
@@ -588,7 +643,6 @@ link:./src/examples/ViewMap.cpp[examples/ViewMap.cpp].
 .Expand ViewMap examples
 [%collapsible]
 ====
-[,cpp]
 ----
 using namespace Kokkidio;
 int nRows {10}, nCols {20};
@@ -640,7 +694,6 @@ parallel_for( mv4.size(), KOKKOS_LAMBDA(int i){
 .Expand synopsis of ViewMap
 [%collapsible]
 ====
-[,cpp]
 ----
 
 template<typename _EigenType, Target targetArg = DefaultTarget>
@@ -765,7 +818,6 @@ link:./src/examples/DualViewMap.cpp[examples/DualViewMap.cpp].
 .Expand DualViewMap examples
 [%collapsible]
 ====
-[,cpp]
 ----
 using namespace Kokkidio;
 int nRows {10}, nCols {20};
@@ -808,7 +860,6 @@ print("after");
 .Expand synopsis of DualViewMap
 [%collapsible]
 ====
-[,cpp]
 ----
 
 template<typename _EigenType, Target targetArg = DefaultTarget>
@@ -920,16 +971,142 @@ DualViewMap<EigenType, target> dualViewMap(Index rows, Index cols);
 
 == Other
 
-=== `IndexRange`
 [id=_indexrange]
+=== `IndexRange`
 
 asdf
 
-== Installation 
+== Installation and Usage
+
+=== Build script
+
+:buildsh: link:./build.sh[build.sh]
+:envnodes: link:./env/nodes[env/nodes]
 
 The multi-backend nature of Kokkos and, by extension, _Kokkidio_, 
-makes the process of configuring and building them rather involved, 
-so we included the script link:./build.sh[`build.sh`] to help with this.
+makes the process of configuring and building rather involved.
+To help with this, the build script `{buildsh}` is included.
+// 
+// Instead, on first run, `{buildsh}` 
+On first run, it
+will create a file in `{envnodes}`,
+whose name is your machine's _node name_, i.e., the output of `uname -n`, 
+plus the ending `.sh`.
+On subsequent runs, this _node file_ is read by `{buildsh}`. 
+In the node file, the 
+`device` architecture and programming model ("backend") must be specified
+by the user:
+
+
+.Expand node file example
+[%collapsible]
+====
+See https://kokkos.org/kokkos-core-wiki/keywords.html#architectures
+for possible values of `Kokkos_ARCH`.
+[,bash]
+----
+###########
+# Required:
+###########
+
+# uncomment one of these
+backend_default=cuda
+# backend_default=hip
+# backend_default=sycl
+# backend_default=ompt # for using OpenMP target offloading
+
+Kokkos_ARCH=Kokkos_ARCH_...
+
+
+###########
+# Optional: 
+###########
+
+# You can set paths to Kokkos and Eigen. The script can download them for you,
+# and by setting [Eigen|Kokkos]_SRC, you can control the destination.
+Eigen_SRC=./lib/eigen
+Kokkos_SRC=./lib/kokkos
+
+# Similarly, [Eigen|Kokkos]_BUILD controls where they will be built
+Eigen_BUILD=$Eigen_SRC/build
+Kokkos_BUILD=$Kokkos_SRC/build
+
+# The install path is set with [Eigen|Kokkos]_INST. If an existing installation
+# is found there, then the download, build, and install steps are skipped.
+# This is tested by the script by looking for the respective CMake package file.
+Eigen_INST="$Eigen_SRC/install"
+Kokkos_INST="$Kokkos_SRC/install"
+
+# any other code you want to run before building comes here ...
+----
+====
+
+:kokkoscomp: https://kokkos.org/kokkos-core-wiki/requirements.html#compiler-versions
+
+You need a compiler that matches the chosen backend. See
+{kokkoscomp}[Kokkos: compiler versions] for details.
+
+The _node file_ approach was chosen to accomodate HPC systems, 
+where code is often run on a different machine 
+to where it was configured/compiled, thus making autodetection unreliable.
+// the machine on which code is configured and compiled is often not the one 
+// where it is run. Therefore, we chose not to rely on autodetection.
+To allow for the same node file to be used across multiple machines,
+e.g., login/compute nodes, you can define conditions/patterns in 
+link:./env/node_patterns.sh[env/node_patterns.sh], e.g.
+
+[,bash]
+----
+if [[ $node_name == *"loginNode"* ]]; then
+	node_name="myNodeFile" # will make build.sh read env/nodes/myNodeFile.sh
+fi
+----
+
+If any additional code needs to be run before configuring building,
+e.g. loading modules or setting a specific compiler,
+that can be done in the node file as well.
+
+
+After setting up the node file, 
+run `./build.sh -h` to see the available options. 
+To download, compile, and install all components, you may use
+`./build.sh -cdi all`.
+
+=== Manual installation
+
+:cmake_find_package: https://cmake.org/cmake/help/latest/command/find_package.html#config-mode-search-procedure
+
+This section assumes that you already have installed Kokkos and Eigen.
+_Kokkidio_ needs to be able to find their respective CMake packages.
+If they cannot be found automatically, 
+you can provide the environment or CMake variables 
+`Kokkos_ROOT`, and `Eigen_ROOT` or `Eigen3_ROOT`. 
+See {cmake_find_package}[CMake's `find_package` doc] for details on these paths.
+
+_Kokkidio_ follows the general way of configuring and installing 
+a CMake project, so you could use build commands such as this:
+
+[,shell]
+----
+cmake \
+	-S . -B ./build --prefix ./install \
+	-DCMAKE_CXX_EXTENSIONS=Off \
+	-D Eigen_ROOT=/path/to/eigen \
+	-D Kokkos_ROOT=/path/to/kokkos
+
+cmake --install ./build
+----
+
+To build the examples (for tests, change `examples` to `tests`), 
+you can then use
+
+[,shell]
+----
+cmake \
+	-S ./src/examples -B /build/examples \
+	-DCMAKE_BUILD_TYPE=Release \
+	-D Kokkidio_ROOT=./install
+----
 
 === CMake integration
 
@@ -968,6 +1145,15 @@ target_sources(myTarget PRIVATE
 kokkidio_configure_target(myTarget)
 ----
 
+For reasons detailed in <<_setcpu>>, we recommend setting up separate
+CPU and device code files. These can `#include` the same unified code file,
+as detailed in that section. Then, you can declare CPU files in CMake 
+using _Kokkidio_'s function `set_is_cpu`, e.g.:
+[,cmake]
+----
+set_is_cpu(myFile1.cpp)
+----
+
 == Notes
 
 === Building Kokkos for _Kokkidio_
@@ -975,6 +1161,8 @@ To achieve CPU parallelism with _Kokkidio_,
 Kokkos should always be built with the OpenMP backend enabled, i.e.
 `KOKKOS_ENABLE_OPENMP=ON`.
 
+
+[id=_setcpu]
 === CPU-Vectorisation with CUDA backend
 
 By default, Eigen disables vectorisation, when `\\__CUDACC__` is defined,
@@ -1015,7 +1203,6 @@ Here's a full example:
 .`source.in`
 [%collapsible]
 ====
-[,cpp]
 ----
 #include <Kokkidio.hpp>
 
@@ -1038,7 +1225,6 @@ template float getSum<MY_SOURCE_TARGET>( const ViewMap<ArrayXf, MY_SOURCE_TARGET
 .`source_host.cpp`
 [%collapsible]
 ====
-[,cpp]
 ----
 #define MY_SOURCE_TARGET Target::host
 #include "source.in"
@@ -1048,7 +1234,6 @@ template float getSum<MY_SOURCE_TARGET>( const ViewMap<ArrayXf, MY_SOURCE_TARGET
 .`source_device.cpp`
 [%collapsible]
 ====
-[,cpp]
 ----
 #define MY_SOURCE_TARGET Target::device
 #include "source.in"
@@ -1071,6 +1256,7 @@ kokkidio_configure_target(myTarget)
 ----
 ====
 
+[id=_syclcpu]
 === CPU execution with SYCL
 
 SYCL, at least in its oneAPI flavour, 
