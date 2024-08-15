@@ -19,19 +19,18 @@
 
 image::./media/Kokkidio_Logo.svg[]
 
+== Overview
+
 _Kokkidio_ is a header-only template library 
 designed to provide interoperability between the linear algebra library {Eigen} 
 and the performance portability framework {Kokkos}. 
 Its aim is to allow the easy-to-read, succinct source code of {Eigen} 
 to be compiled to fast machine code on all the platforms supported by {Kokkos}.  
 
-toc::[]
 
-
-== Overview
-
-_Kokkidio_ 
-is built on top of both {kokkos} and {eigen}, and
+// _Kokkidio_ 
+// is built on top of both {kokkos} and {eigen}, and
+It
 consists of three interlocking elements:
 
 * An iteration range class (`ParallelRange`), 
@@ -89,66 +88,33 @@ z.copyToHost();
 ----
 ====
 
-== Why Kokkos?
+'''
 
-{Kokkos} is a portability and parallelism framework, 
-which allows users to write code that compiles and runs 
-on a wide range of hardware, especially both CPUs and GPUs.
-It provides data structures
-(https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/View.html[`Kokkos::View`]),
-as well as functions for 
-https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/ParallelDispatch.html[parallel dispatch],
-and
-// It 
-may be viewed as a common abstraction 
-for various programming models and backends, e.g.
-OpenMP, including target offloading, OpenACC, CUDA, HIP, and SYCL.
-Here's an example:
+toc::[]
 
-.SAXPY with Kokkos
-[%collapsible,id=kokkos_ex]
-====
-----
-float a {0.5};
-std::size_t dim1 {10};
-/* for more details, see
- * https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/View.html#constructing-a-view
- */
-using View = Kokkos::View<float*, Kokkos::DefaultExecutionSpace>;
-View x {dim1}, y {dim1}, z {dim1};
-/* fill arrays in some way,
- * e.g. using deep_copy or within a parallel dispatch ... */
-
-/* and now do the computation in parallel */
-Kokkos::parallel_for( dim1, KOKKOS_LAMBDA(std::size_t i){
-	z(i) = a * x(i) + y(i);
-});
-----
-====
-
-While modern compilers already allow targeting multiple CPU architectures,
-due to ISAs functioning as a reliable standard (x86(-64), ARM, ...),
-GPU architectures and programming models are much less intercompatible.
-If you wrote your code using CUDA, 
-but want to run it on an Intel PonteVecchio GPU, 
-you will have to rewrite large parts of it.
-
-Using {Kokkos} for new projects allows you to avoid that type of effort.
-For existing projects, it allows a step-by-step migration, 
-because backend-specific code will still compile 
-when using Kokkos on top of that backend.
-
-// GPU architectures don't just vary between vendors, 
-// but often also between product generations and product lines of a single vendor.
-// // e.g. GCN being superseded by RDNA and CDNA, 
-// // or <NVIDIA>
+== Motivation
 
 
-// Therefore, expressing a programming task 
-// through Kokkos' data structures and parallel dispatch functions
-// allows it to be run on basically any hardware
+While {eigen} offers an expressive syntax and extensive functionality
+for linear algebra operations, 
+its abstractions complicate the process of adapting it to 
+parallel execution on GPUs.
+_Kokkidio_ was conceived as a way to streamline this process
+by providing a lightweight, header-only library
+that bridges the gap between Eigen and the portability framework {kokkos}.
+// It enables using Eigen operations and functions _within_
+// the explicit parallel structures of Kokkos.
+// 
+// _Kokkidio_ was conceived as a way to streamline the process of
+// extending existing {eigen} code
+// to support GPU computation.
+// a wider range of compute hardware -- particularly GPUs.
+// The initial goal was to enable GPU execution for an explicit FVM solver
+// Its strengths, just like its limitations, are born 
+// To minimise redundancy
 
-== Why Eigen?
+
+=== Why Eigen?
 
 {Eigen} is a linear algebra library, 
 which allows writing any such operations in a readable, succinct manner,
@@ -229,14 +195,72 @@ such as the SSE and AVX families on x86, ARM NEON, and others.
 // with which other data structures can be treated like an Eigen object,
 // if they expose a data pointer and their memory layout and stride(s) are known.
 
-== And why Kokkidio?
+
+=== Why Kokkos?
+
+{Kokkos} is a portability and parallelism framework, 
+which allows users to write code that compiles and runs 
+on a wide range of hardware, especially both CPUs and GPUs.
+It provides data structures
+(https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/View.html[`Kokkos::View`]),
+as well as functions for 
+https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/ParallelDispatch.html[parallel dispatch],
+and
+// It 
+may be viewed as a common abstraction 
+for various programming models and backends, e.g.
+OpenMP, including target offloading, OpenACC, CUDA, HIP, and SYCL.
+Here's an example:
+
+.SAXPY with Kokkos
+[%collapsible,id=kokkos_ex]
+====
+----
+float a {0.5};
+std::size_t dim1 {10};
+/* for more details, see
+ * https://kokkos.org/kokkos-core-wiki/ProgrammingGuide/View.html#constructing-a-view
+ */
+using View = Kokkos::View<float*, Kokkos::DefaultExecutionSpace>;
+View x {dim1}, y {dim1}, z {dim1};
+/* fill arrays in some way,
+ * e.g. using deep_copy or within a parallel dispatch ... */
+
+/* and now do the computation in parallel */
+Kokkos::parallel_for( dim1, KOKKOS_LAMBDA(std::size_t i){
+	z(i) = a * x(i) + y(i);
+});
+----
+====
+
+While modern compilers already allow targeting multiple CPU architectures,
+due to ISAs functioning as a reliable standard (x86(-64), ARM, ...),
+GPU architectures and programming models are much less intercompatible.
+If you wrote your code using CUDA, 
+but want to run it on an Intel PonteVecchio GPU, 
+you will have to rewrite large parts of it.
+
+Using {Kokkos} for new projects allows you to avoid that type of effort.
+For existing projects, it allows a step-by-step migration, 
+because backend-specific code will still compile 
+when using Kokkos on top of it.
+
+// GPU architectures don't just vary between vendors, 
+// but often also between product generations and product lines of a single vendor.
+// // e.g. GCN being superseded by RDNA and CDNA, 
+// // or <NVIDIA>
+
+
+// Therefore, expressing a programming task 
+// through Kokkos' data structures and parallel dispatch functions
+// allows it to be run on basically any hardware
+
+=== The problems
 
 There exist a number of problems when trying to use Eigen's functionality on GPUs 
 (e.g. with Kokkos),
 // which are detailed below -- and 
 which _Kokkidio_ aims to address.
-
-=== The problems
 
 . *Data structures* +
 Since version 3.4, Eigen functions can be called from CUDA/HIP kernels,
@@ -514,22 +538,32 @@ and constructs a `ParallelRange<device>` from a single element index.
 On `host` (CPU), this calls a _Kokkidio_-specific function 
 emulating OpenMP-logic for distributing work items evenly to threads.
 The index range of work items consists of a start index and a number of items,
-and is expressed as the <<_indexrange, `IndexRange` class>>.
-From this, a `ParallelRange<host>` is created, which, 
+// and is expressed as the <<_indexrange, `IndexRange` class>>. 
+// From this, a `ParallelRange<host>` is created, which, 
+from which a `ParallelRange<host>` is created. This,
 when applied to an Eigen or `(Dual)ViewMap` object,
 returns a contiguous `Eigen::Block` of data, corresponding to the index range.
 
-If a functor is provided that does not take a `ParallelRange` as its parameter,
+If a functor is provided 
+that does not take a `ParallelRange` as its first parameter,
 _Kokkidio_'s parallel dispatch functions 
 simply forward to their Kokkos equivalent 
 (except for <<_syclcpu>>).
+
+The first parameter (`someSizeOrPolicy` in the example above)
+can be an integer number, 
+a `Kokkos::RangePolicy`, 
+or a <<_indexrange, `Kokkidio::IndexRange`>>
+
+A variant of these is `parallel_[for|reduce]_chunks`. 
+See <<_chunkbuf>> for details.
 
 ==== Examples
 
 .`parallel_for`
 [%collapsible,id=parfor_ex]
 ====
-(shortened from example in <<kokkidio_ex, in overview>>)
+(shortened from SAXPY example in <<kokkidio_ex, in overview>>)
 ----
 using namespace Kokkidio;
 float a {0.5};
@@ -558,7 +592,7 @@ z.copyToHost();
 .`parallel_reduce`
 [%collapsible,id=parreduce_ex]
 ====
-(taken from link:./src/examples/colmult.cpp[examples/colmult.cpp],
+(taken from link:./src/examples/colmult/colmult.cpp[colmult.cpp],
 see also <<par_issue_eigen>>)
 ----
 using namespace Kokkidio;
@@ -575,17 +609,109 @@ b.map_host().setRandom();
 a.copyToTarget();
 b.copyToTarget();
 
-double result_g = 0;
+double result = 0;
 /* perform parallel computation and reduction (2D -> column range) */
-parallel_reduce( a.cols(),
-	KOKKOS_LAMBDA(ParallelRange<> rng, double& result_l){
-	result_l += ( rng(a).transpose() * rng(b) ).trace(); // trace = sum of the diagonal
-	/* equivalent: sum of coefficient-wise products */
-	result_l += ( rng(a).array() * rng(b).array() ).sum();
-}, redux::sum(result_g) );
+parallel_reduce(
+	a.cols(),
+	KOKKOS_LAMBDA(ParallelRange<> rng, double& sum){
+		sum += ( rng(a).transpose() * rng(b) ).trace(); // trace = sum of the diagonal
+		/* equivalent: sum of coefficient-wise products */
+		sum += ( rng(a).array() * rng(b).array() ).sum();
+	},
+	redux::sum(result)
+);
 ----
 ====
 
+=== (Chunk) buffers
+[id=_chunkbuf]
+
+When intermediate results are needed in a computational loop, 
+their implementation in (scalar) C++ is straightforward,
+as one would simply define a stack variable:
+
+----
+std::vector<double> arr {size};
+for (double& a : arr){
+	/* let's say we need the result of some expensive function multiple times */
+	double helperVar = std::pow(a, 0.3);
+	a = helperVar + 1 / helperVar;
+}
+----
+
+However, Eigen offers no obvious way to define intermediate results 
+as _stack_ variables, as the loop is abstracted.
+Instead, we could use an array buffer:
+
+----
+Eigen::ArrayXd arr {size}, buf {size};
+buf = arr.pow(0.3);
+arr = buf + 1 / buf;
+----
+
+This may not be ideal,
+as a whole array is allocated, even though only a couple of values are needed,
+and additional memory accesses are introduced.
+
+_Kokkidio_ offers a `ChunkBuffer` structure, 
+which alleviates this issue within a parallel dispatch.
+The `ChunkBuffer` requires an Eigen type (`ColType`) 
+as its first template parameter.
+Here, users provide the fixed-size type closest to what they'd need 
+in a single loop iteration,
+e.g., for the example above, 
+an `Eigen::Array<double, 1, 1>` (a `double` array with a single element).
+This allows users to define 
+whether they require `Eigen::Array` or `Eigen::Matrix` behaviour.
+
+The second template parameter is the `Target` enumeration.
+On `host`, a `ChunkBuffer` contains one array per thread 
+(using `omp_get_max_threads`), 
+with the same number of rows as `ColType`, 
+and the chunk size of the parallel loop as the number of columns. 
+A reasonable default is chosen for the chunk size, 
+but it can also optionally be specified via a `Kokkos::RangePolicy`.
+This improves the likelihood of the buffer data remaining in cache.
+
+
+On `device`, a `ChunkBuffer` contains no data. 
+Instead, it only wraps `ColType`. 
+When accessing this buffer inside a parallel dispatch, 
+the type gets instantiated -- 
+and because fixed-size types are allocated on the stack, 
+this is equivalent to defining stack variables in a C-style loop.
+
+Usage:
+
+----
+ViewMap<Eigen::ArrayXd> arr {size};
+
+/* number of intermediate values = number of rows */
+constexpr int numVals {1};
+using Array1d = Eigen::Array<double, numVals, 1>;
+
+/* create buffer */
+auto chunkBuf = makeBuffer<Array1d, target>(size);
+
+parallel_for_chunks<target>(size, KOKKOS_LAMBDA(EigenRange<target> chunk){
+	/* access buffer inside parallel dispatch */
+	auto buf = getBuffer(chunkBuf, chunk);
+
+	/* use the EigenRange "chunk" like a ParallelRange */
+	buf = chunk(arr).pow(0.3);
+	chunk(arr) = buf + 1 / buf;
+});
+----
+
+The dispatch function `parallel_for_chunks` is a shortcut for the following:
+
+----
+parallel_for<target>(size, KOKKOS_LAMBDA(ParallelRange<target> rng){
+	rng.for_each_chunk( [&](auto chunk){
+		/* same body */
+	});
+});
+----
 
 == Data structures
 
@@ -637,12 +763,13 @@ via `ViewMap::resize()`.
 
 ==== Examples
 
-The examples below are taken from
-link:./src/examples/ViewMap.cpp[examples/ViewMap.cpp].
+
 
 .Expand ViewMap examples
 [%collapsible]
 ====
+(taken from
+link:./src/examples/ViewMap.cpp[examples/ViewMap.cpp])
 ----
 using namespace Kokkidio;
 int nRows {10}, nCols {20};
@@ -812,12 +939,11 @@ and does so on both `host` and the specified `Target`.
 
 ==== Examples
 
-The examples below are taken from
-link:./src/examples/DualViewMap.cpp[examples/DualViewMap.cpp].
-
 .Expand DualViewMap examples
 [%collapsible]
 ====
+(taken from
+link:./src/examples/DualViewMap.cpp[examples/DualViewMap.cpp])
 ----
 using namespace Kokkidio;
 int nRows {10}, nCols {20};
@@ -974,7 +1100,77 @@ DualViewMap<EigenType, target> dualViewMap(Index rows, Index cols);
 [id=_indexrange]
 === `IndexRange`
 
-asdf
+:eigendoc_block: https://eigen.tuxfamily.org/dox-devel/group__TutorialBlockOperations.html
+:kokkosdoc_rangepol: https://kokkos.org/kokkos-core-wiki/API/core/policies/RangePolicy.html
+
+`IndexRange` is a small, but expressive helper class 
+intended to unify the different ways
+in which ranges of discrete items are described in Eigen and Kokkos:
+Eigen's {eigendoc_block}[block operations] 
+use the first index and the number of items,
+while Kokkos (e.g. {kokkosdoc_rangepol}[`RangePolicy`]) describe ranges
+using `begin` and `end` indices.
+
+Use it to define the work range (first argument) 
+in a <<_parfor, parallel dispatch>>, 
+if your work range does not start at zero.
+
+.Expand `IndexRange` synopsis
+[%collapsible]
+====
+----
+
+/* empty structs used in IndexRange constructors */
+struct LimitIsEnd {};
+struct LimitIsSize {};
+
+template<typename _Integer>
+class IndexRange {
+public:
+	using Integer = _Integer;
+	/* synonyms to match Kokkos */
+	using index_type = Integer;
+	using value_type = Integer;
+
+	/* the actual data member */
+	struct Aggregate {
+		Integer start, size;
+	} values;
+
+public:
+	/* getter */
+	KOKKOS_FUNCTION Integer start() const;
+	KOKKOS_FUNCTION Integer size () const;
+	KOKKOS_FUNCTION Integer begin() const; // synonym for "start"
+	KOKKOS_FUNCTION Integer count() const; // synonym for "size"
+	KOKKOS_FUNCTION Integer end  () const;
+
+	/* setter */
+	KOKKOS_FUNCTION void start(Integer);
+	KOKKOS_FUNCTION void size (Integer);
+	KOKKOS_FUNCTION void begin(Integer); // synonym for "start"
+	KOKKOS_FUNCTION void count(Integer); // synonym for "size"
+	KOKKOS_FUNCTION void end  (Integer);
+
+	template<typename LimitType = LimitIsSize>
+	KOKKOS_FUNCTION void set(Integer start, Integer limit);
+
+	/* constructors */
+	KOKKOS_FUNCTION IndexRange() = default;
+	KOKKOS_FUNCTION IndexRange(Integer size); // sets "start" to zero
+
+	/* can be used with
+	 * 1) size as second arg -> third arg can be LimitIsSize{} or omitted
+	 * 2) end  as second arg -> third arg must be LimitIsEnd{} */
+	template<typename LimitType = LimitIsSize>
+	KOKKOS_FUNCTION IndexRange(Integer start, Integer limit, LimitType = {});
+
+	/* conversion from other integral types */
+	template<typename OtherInt, SFINAE...>
+	KOKKOS_FUNCTION IndexRange( const IndexRange<OtherInt>& other );
+};
+----
+====
 
 == Installation and Usage
 
@@ -1119,7 +1315,7 @@ find_package(Kokkidio)
 
 If you didn't install _Kokkidio_ in a standard directory, 
 then you need to provide the CMake or environment variable `Kokkidio_ROOT`.
-It must point to the installation directory, 
+It should point to the installation directory, 
 i.e. the one containing the directories `include` and `lib`.
 
 Due to some trickery that _Kokkidio_ has to apply to source files,
