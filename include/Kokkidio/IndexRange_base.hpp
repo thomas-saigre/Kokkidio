@@ -75,7 +75,7 @@ public:
 		}
 	}
 
-	IndexRange() = default;
+	KOKKOS_FUNCTION IndexRange() = default;
 
 	KOKKOS_FUNCTION IndexRange(Integer size){
 		this->set(0, size);
