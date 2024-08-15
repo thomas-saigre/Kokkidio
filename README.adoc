@@ -292,7 +292,7 @@ so that individual threads still use Eigen functionality.
 .Multiply matrix columns
 [%collapsible, id=par_issue_eigen]
 ====
-(taken from link:./src/examples/colmult_eigen.cpp[examples/colmult_eigen.cpp])
+(taken from link:./src/examples/colmult/colmult_eigen.cpp[colmult_eigen.cpp])
 ----
 int nRows {4}, nCols {1000};
 Eigen::MatrixXd a {nRows, nCols}, b;
@@ -1215,10 +1215,6 @@ float getSum( const ViewMap<ArrayXf, target>& vm ){
 	parallel_reduce( vm.size(), func, redux::sum(sum_global) );
 	return sum_global;
 }
-
-/* explicit instantiation */
-template float getSum<MY_SOURCE_TARGET>( const ViewMap<ArrayXf, MY_SOURCE_TARGET>& );
-#undef MY_SOURCE_TARGET
 ----
 ====
 
@@ -1226,8 +1222,9 @@ template float getSum<MY_SOURCE_TARGET>( const ViewMap<ArrayXf, MY_SOURCE_TARGET
 [%collapsible]
 ====
 ----
-#define MY_SOURCE_TARGET Target::host
 #include "source.in"
+/* explicit instantiation for host */
+template float getSum<Target::host>( const ViewMap<ArrayXf, Target::host>& );
 ----
 ====
 
@@ -1235,8 +1232,9 @@ template float getSum<MY_SOURCE_TARGET>( const ViewMap<ArrayXf, MY_SOURCE_TARGET
 [%collapsible]
 ====
 ----
-#define MY_SOURCE_TARGET Target::device
 #include "source.in"
+/* explicit instantiation for device */
+template float getSum<Target::device>( const ViewMap<ArrayXf, Target::device>& );
 ----
 ====
 
