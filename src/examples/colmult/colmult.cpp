@@ -33,22 +33,10 @@ int main(int argc, char** argv){
 	/* perform parallel computation and reduction (2D -> column range) */
 	Kokkidio::parallel_reduce<target>(
 		a.cols(),
-		// nCols,
 		KOKKOS_LAMBDA(ParallelRange<target> rng, double& sum){
-			// sum += ( rng(a).transpose() * rng(b) ).trace(); // trace = sum of the diagonal
+			sum += ( rng(a).transpose() * rng(b) ).trace(); // trace = sum of the diagonal
 			/* equivalent: sum of coefficient-wise products */
-			printf("isAlloc (addr|bool), a: %p|%s, b: %p|%s\n"
-				, (void*) a.view_target().data()
-				, a.view_target().is_allocated() ? "true" : "false"
-				, (void*) b.view_target().data()
-				, b.isAlloc_target() ? "true" : "false"
-			);
 			// sum += ( rng(a).array() * rng(b).array() ).sum();
-			// sum += ( rng( a.map_target() ).array() * rng( b.map_target() ).array() ).sum();
-			sum += (
-				detail::colRange( rng.get(), a.map_target() ).array() *
-				detail::colRange( rng.get(), b.map_target() ).array()
-			).sum();
 		},
 		redux::sum(result)
 	);
@@ -78,7 +66,6 @@ void printFirstN( int nPrint, const ViewMapType& a, const ViewMapType& b ){
 	Eigen::IOFormat fmt( precision, opts, " * ", " + \n", "(", ")" );
 
 	std::stringstream str;
-	// str << std::fixed;
 	for (int i{0}; i<nPrint; ++i){
 		colBuf << a.map_host().col(i), b.map_host().col(i);
 		str

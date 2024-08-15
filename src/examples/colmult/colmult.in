@@ -1,0 +1,74 @@
+#include <Kokkidio.hpp>
+#include <iostream>
+
+#include "magic_enum.hpp"
+
+
+template<typename ViewMapType>
+void printFirstN( int nPrint, const ViewMapType& a, const ViewMapType& b );
+
+template<Kokkidio::Target target>
+void colmult(int nRows, int nCols){
+
+	using namespace Kokkidio;
+	std::cout << "\"colmult\", target: " << magic_enum::enum_name(target) <<'\n';
+
+	/* create and set the input matrices */
+	using MatrixView = DualViewMap<Eigen::MatrixXd, target>;
+	// MatrixView a {nRows, nCols}, b {nRows, nCols};
+	MatrixView a {nRows, nCols}, b;
+	b.resizeLike(a);
+
+	a.map_host().setRandom();
+	b.map_host().setRandom();
+
+	a.copyToTarget();
+	b.copyToTarget();
+
+	double result = 0;
+	/* perform parallel computation and reduction (2D -> column range) */
+	Kokkidio::parallel_reduce<target>(
+		a.cols(),
+		KOKKOS_LAMBDA(ParallelRange<target> rng, double& sum){
+			// sum += ( rng(a).transpose() * rng(b) ).trace(); // trace = sum of the diagonal
+			/* equivalent: sum of coefficient-wise products */
+			sum += ( rng(a).array() * rng(b).array() ).sum();
+		},
+		redux::sum(result)
+	);
+
+	std::cout
+		<< "Result: " << result
+		// << ", expected: " << ( a.map_host().transpose() * b.map_host() ).trace()
+		<< ", expected: " << ( a.map_host().array() * b.map_host().array() ).sum()
+		<< '\n';
+	// printFirstN(5, a, b);
+}
+
+
+
+
+
+template<typename ViewMapType>
+void printFirstN( int nPrint, const ViewMapType& a, const ViewMapType& b ){
+	int nCols { a.cols() };
+	nPrint = std::min(nPrint, nCols);
+
+	/* col buffer for printing */
+	Eigen::MatrixXd colBuf ( a.rows(), 2 );
+	int precision {4}, opts {0};
+	Eigen::IOFormat fmt( precision, opts, " * ", " + \n", "(", ")" );
+
+	std::stringstream str;
+	for (int i{0}; i<nPrint; ++i){
+		colBuf << a.map_host().col(i), b.map_host().col(i);
+		str
+			<< colBuf.format(fmt) << " = " 
+			<< colBuf.col(0).dot(colBuf.col(1))
+			<< '\n';
+	}
+	if (nPrint < nCols){
+		str << "...\n";
+	}
+	std::cout << "Check:\n" << str.str();
+}
