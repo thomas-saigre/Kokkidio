@@ -556,7 +556,7 @@ a `Kokkos::RangePolicy`,
 or a <<_indexrange, `Kokkidio::IndexRange`>>
 
 A variant of these is `parallel_[for|reduce]_chunks`. 
-See <<_chunkbuf>> for details.
+See section <<_chunkbuf>> for details.
 
 ==== Examples
 
@@ -623,8 +623,8 @@ parallel_reduce(
 ----
 ====
 
-=== (Chunk) buffers
 [id=_chunkbuf]
+=== (Chunk) buffers
 
 When intermediate results are needed in a computational loop, 
 their implementation in (scalar) C++ is straightforward,
