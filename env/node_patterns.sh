@@ -9,3 +9,8 @@ fi
 if [[ $node_name == "bgi"* ]]; then
 	node_name="zib_intel"
 fi
+
+# compute node names have the same pattern as login nodes
+if [[ $node_name == "ftp-x86"* ]]; then
+	node_name="horeka_ftp"
+fi
