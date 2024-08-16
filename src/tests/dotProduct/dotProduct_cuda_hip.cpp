@@ -39,11 +39,12 @@ __global__ void colwise_manual(const scalar* m1, const scalar* m2, scalar* block
 		gridSize = 2 * blockSize * gridDim.x;
 	sdata[tid] = 0;
 
-	while (i < nCols){
+	unsigned int uCols { static_cast<unsigned int>(nCols) };
+	while (i < uCols){
 		for (int j = 0; j<nRows; ++j){
 			int idx = i * nRows + j;
 			sdata[tid] += m1[idx] * m2[idx];
-			if (i+blockDim.x < nCols){
+			if (i+blockDim.x < uCols){
 				idx = (i+blockDim.x) * nRows + j;
 				sdata[tid] += m1[idx] * m2[idx];
 			}
