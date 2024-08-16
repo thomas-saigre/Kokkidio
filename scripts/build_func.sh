@@ -364,6 +364,7 @@ check_install_all () {
 cmake_flags_reset () {
 	# reset cmakeFlags between runs/backends etc.
 	cmakeFlags=""
+	cmakeFlags+=" ${cmakeFlags_add:-""} "
 }
 
 cmake_flags_set_shared () {
@@ -457,8 +458,10 @@ build_kokkos () {
 	cmakeFlags+=" -DKokkos_ENABLE_AGGRESSIVE_VECTORIZATION=ON"
 	if [[ $backend =~ cuda|hip ]]; then
 		set_gpu_arch $backend true
-		cmakeFlags+=" -DKokkos_ENABLE_CUDA_CONSTEXPR=ON"
-		cmakeFlags+=" -DKokkos_ENABLE_CUDA_LAMBDA=ON"
+		if [[ $backend == cuda ]]; then
+			cmakeFlags+=" -DKokkos_ENABLE_CUDA_CONSTEXPR=ON"
+			cmakeFlags+=" -DKokkos_ENABLE_CUDA_LAMBDA=ON"
+		fi
 	fi
 	if [[ $backend =~ sycl|ompt ]]; then
 		set_gpu_arch $backend
