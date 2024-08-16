@@ -61,7 +61,7 @@ IndexRange<Integer> ompSegment( IndexRange<Integer> range ){
 	return {start, count};
 
 	#else
-	return {0, n};
+	return range;
 	#endif
 }
 
