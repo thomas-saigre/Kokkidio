@@ -11,9 +11,11 @@
 
 #if defined(KOKKIDIO_USE_CUDA)
 #include <cuda_runtime.h>
-#elif defined(KOKKIDIO_USE_HIP)
-#include <hip/nvidia_detail/nvidia_hip_runtime.h> // defines __HIPCC__ it seems.
-#include <hip/nvidia_detail/nvidia_hip_runtime_api.h>
+/* this was only useful when using HIP on a CUDA machine, 
+ * which Kokkos doesn't allow anyway */
+// #elif defined(KOKKIDIO_USE_HIP)
+// #include <hip/nvidia_detail/nvidia_hip_runtime.h> // defines __HIPCC__ it seems.
+// #include <hip/nvidia_detail/nvidia_hip_runtime_api.h>
 #endif
 
 /* including Eigen/Dense (via typeAliases.hpp) after the hip runtime

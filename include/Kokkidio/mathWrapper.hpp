@@ -59,7 +59,7 @@ template<typename T, typename Scalar>
 KOKKOS_FUNCTION auto pow(const T& base, Scalar exp) -> decltype(auto) {
 	using U = remove_qualifiers<T>;
 	if constexpr ( std::is_base_of_v<Eigen::DenseBase<U>, U> ){
-		#ifdef __CUDA_ARCH__
+		#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 			if constexpr ( std::is_floating_point_v<Scalar> ){
 				assert( base.size() == 1 );
 				return detail::pow(base(0,0), exp);
