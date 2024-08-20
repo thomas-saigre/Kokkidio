@@ -289,8 +289,7 @@ template<typename T>
 inline constexpr bool is_DualViewMap_v = is_DualViewMap<T>::value;
 
 template<Target target = DefaultTarget, typename EigenType>
-std::enable_if_t<
-	std::is_base_of_v<Eigen::DenseBase<EigenType>, EigenType>,
+std::enable_if_t<is_eigen_dense<remove_qualifiers<EigenType>>,
 	DualViewMap<EigenType, target>
 >
 dualViewMap(

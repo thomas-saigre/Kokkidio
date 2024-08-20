@@ -29,6 +29,10 @@ template<typename T>
 inline constexpr bool is_eigen_array_v = is_eigen_array<T>::value;
 
 
+template<typename EigenType>
+inline constexpr bool is_eigen_dense =
+	std::is_base_of_v< Eigen::DenseBase<EigenType>, EigenType >;
+
 
 
 template<typename T>
