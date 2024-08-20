@@ -25,7 +25,7 @@ enum class Kernel {
 };
 
 template<Target target, Kernel k>
-scalar dotProduct(const MatrixXs& m1, const MatrixXs& m2, int iterations);
+scalar dotProduct(const MatrixXs& m1, const MatrixXs& m2, int nRuns);
 
 } // namespace cpu
 
@@ -39,7 +39,7 @@ enum class Kernel {
 };
 
 template<Target target, Kernel k>
-scalar dotProduct(const MatrixXs& m1, const MatrixXs& m2, int iterations);
+scalar dotProduct(const MatrixXs& m1, const MatrixXs& m2, int nRuns);
 
 } // namespace gpu
 
@@ -59,7 +59,7 @@ enum class Kernel {
 };
 
 template<Target target, Kernel k>
-scalar dotProduct(const MatrixXs& m1, const MatrixXs& m2, int iterations);
+scalar dotProduct(const MatrixXs& m1, const MatrixXs& m2, int nRuns);
 
 } // namespace unif
 
