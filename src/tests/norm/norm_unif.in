@@ -1,0 +1,78 @@
+#include "norm.hpp"
+#include <Kokkidio.hpp>
+
+#include "magic_enum.hpp"
+
+#ifndef KOKKIDIO_NORM_TARGET
+#define KOKKIDIO_NORM_TARGET Target::device
+#endif
+
+namespace Kokkidio::unif
+{
+
+template<Target target, Kernel k>
+scalar norm(const MatrixXs& mat, int nRuns){
+
+	const int nRows = mat.rows();
+	const int nCols = mat.cols();
+
+	auto map { dualViewMap<target>(mat) };
+
+	scalar result {0};
+
+	auto reduce = [&](const auto& func) -> void {
+		for (int run = 0; run < nRuns; ++run){
+			result = 0;
+			parallel_reduce<target>( nCols, func, redux::max(result) );
+		}
+	};
+
+	using K = Kernel;
+
+	if constexpr (k == K::eigen_colwise){
+		printd("running unified-eigen_colwise.\n");
+		auto func = KOKKOS_LAMBDA(int i, scalar& max){
+			max = std::max( max, map.map().col(i).norm() );
+		};
+		reduce(func);
+	} else
+	if constexpr (k == K::eigen_ranged){
+		printd("running unified-eigen_ranged.\n");
+		auto func = KOKKOS_LAMBDA(ParallelRange<target> rng, scalar& max){
+			max = std::max( max, rng(map).colwise().norm().maxCoeff() );
+		};
+		reduce(func);
+	} else 
+	if constexpr (k == K::cstyle){
+		printd("running cstyle\n");
+		/* Every thread calculates it's column */
+		auto func = KOKKOS_LAMBDA(int j, scalar& max){
+			const scalar* map_ptr { map.view().data() };
+
+			scalar norm {0};
+
+			for (int i = 0; i < nRows; ++i){
+				int idx = j * nRows + i;
+				norm += map_ptr[idx] * map_ptr[idx];
+			}
+			max = std::max( max, sqrt(norm) );
+		};
+		reduce(func);
+	}
+
+	return result;
+}
+
+#define KOKKIDIO_INSTANTIATE(CTARGET, KERNEL) \
+template scalar norm<CTARGET, KERNEL>( const MatrixXs& mat, int nRuns);
+
+
+KOKKIDIO_INSTANTIATE(KOKKIDIO_NORM_TARGET, Kernel::cstyle)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_NORM_TARGET, Kernel::eigen_colwise)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_NORM_TARGET, Kernel::eigen_ranged)
+
+
+#undef KOKKIDIO_INSTANTIATE
+#undef KOKKIDIO_NORM_TARGET
+
+} // namespace Kokkidio::unif
