@@ -713,6 +713,8 @@ parallel_for<target>(size, KOKKOS_LAMBDA(ParallelRange<target> rng){
 });
 ----
 
+See <<_eigenrange, `EigenRange`>> for the data type of the `chunk` parameter.
+
 == Data structures
 
 === `ViewMap`
@@ -1168,6 +1170,66 @@ public:
 	/* conversion from other integral types */
 	template<typename OtherInt, SFINAE...>
 	KOKKOS_FUNCTION IndexRange( const IndexRange<OtherInt>& other );
+};
+----
+====
+
+[id=_eigenrange]
+=== `EigenRange`
+
+`EigenRange` contains a data member, whose type is 
+<<_indexrange,`IndexRange`>> on `host`, and a single `Index` on `device`.
+It
+provides functions for getting an `Eigen::Block` expression
+from an Eigen or `(Dual)ViewMap` object,
+whose extents conform to the data member, e.g., 
+a contiguous range of rows/columns on `host`, 
+or a single row/column on `device`.
+It is the base class of <<_parrange, `ParallelRange`>>,
+as well as 
+the functor parameter type in `parallel_for_chunks` 
+and `ParallelRange::for_each_chunk` 
+(see <<_chunkbuf>>).
+// and 
+// the return type of `ParallelRange::make_chunk`.
+
+.Expand `EigenRange` synopsis
+[%collapsible]
+====
+----
+template<Target _target>
+class EigenRange {
+public:
+	static constexpr Target target {_target};
+	static constexpr bool isDevice {target == Target::device};
+	static constexpr bool isHost   {target == Target::host};
+	using MemberType = std::conditional_t<isHost, IndexRange<Index>, int>;
+
+protected:
+	MemberType m_rng;
+
+public:
+	KOKKOS_FUNCTION EigenRange() = default;
+
+	KOKKOS_FUNCTION EigenRange( MemberType );
+
+	KOKKOS_FUNCTION const MemberType& get() const;
+	KOKKOS_FUNCTION       MemberType& get();
+
+	KOKKOS_FUNCTION IndexRange<Index> asIndexRange() const;
+
+	template<typename EigenObj>
+	KOKKOS_FUNCTION Eigen::Block<...> colRange( EigenObj&& obj ) const;
+
+	template<typename EigenObj>
+	KOKKOS_FUNCTION Eigen::Block<...> rowRange( EigenObj&& obj ) const;
+
+	template<typename EigenObj>
+	KOKKOS_FUNCTION Eigen::Block<...> range( EigenObj&& obj ) const;
+
+	/* effectively the same as range(...) */
+	template<typename EigenObj>
+	KOKKOS_FUNCTION Eigen::Block<...> operator() ( EigenObj&& obj ) const;
 };
 ----
 ====
