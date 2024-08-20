@@ -1,11 +1,12 @@
 #ifndef KOKKIDIO_DOTPRODUCT_HPP
 #define KOKKIDIO_DOTPRODUCT_HPP
 
-
 #include <Kokkidio.hpp>
+
 
 namespace Kokkidio
 {
+
 
 namespace cpu
 {
@@ -64,8 +65,5 @@ scalar dotProduct(const MatrixXs& m1, const MatrixXs& m2, int iterations);
 
 
 } // namespace Kokkidio
-
-#undef DOTFUNC_UNIF
-#undef DOTFUNC
 
 #endif
