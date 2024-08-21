@@ -92,8 +92,6 @@ void run_axpy(const BenchOpts b){
 	if ( b.target != "gpu" && (z.size() <= 1000 * 1000 * 1000 || b.nRuns <= 500) ){
 		setNat();
 		using cK = cpu::Kernel;
-		opts.groupComment = "native";
-		opts.skipWarmup = true;
 		runAndTime<axpy_cpu, T::host, cK
 			, cK::eigen_par // first one is for warmup
 			, cK::cstyle_seq
