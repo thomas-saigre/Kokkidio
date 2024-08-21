@@ -56,7 +56,7 @@ while [ : ]; do
 			exit
 			;;
 		-x | --example)
-			if ! [[ "$2" =~ axpy|dotProduct|friction ]]; then
+			if ! [[ "$2" =~ axpy|dotProduct|norm|friction ]]; then
 				echo "Unknown example: \"$2\". Exiting..."
 				print_help
 				exit
@@ -208,95 +208,118 @@ if [[ "$example" == "axpy" ]]; then
 		optkeys+=(
 			"GPU--native-cstyle"
 			"GPU--unified-cstyle"
-			"GPU--unified-kokkos"
-			"GPU--unified-kokkidio"
+			"GPU--unified-kokkidio_index"
+			"GPU--unified-kokkidio_range"
 		)
 	fi
 	if [[ "$target" != "gpu" ]]; then
 		optkeys+=(
-			"CPU--unified-warmup"
+			"CPU--native-cstyle_seq"
+			"CPU--native-cstyle_par"
+			"CPU--native-eigen_seq"
+			"CPU--native-eigen_par"
 			"CPU--unified-cstyle"
-			"CPU--unified-kokkos"
-			"CPU--unified-kokkidio"
-			"CPU--native-cstyle_parallel"
-			"CPU--native-cstyle_parallel"
-			"CPU--native-cstyle_sequential"
-			"CPU--native-eigen_sequential"
-			"CPU--native-eigen_parallel"
+			"CPU--unified-kokkidio_index"
+			"CPU--unified-kokkidio_range"
 		)
 	fi
 fi
 
+
+
+
 if [[ "$example" == "dotProduct" ]]; then
 	if [[ "$target" != "cpu" ]]; then
-		if [[ "$backend" =~ cuda|hip ]]; then
-			optkeys+=(
-				"GPU--native-cstyle_blockbuf"
-			)
-		fi
+		# if [[ "$backend" =~ cuda|hip ]]; then
+		# 	optkeys+=(
+		# 		"GPU--native-cstyle_blockbuf"
+		# 	)
+		# fi
 		optkeys+=(
-			"GPU--unified-cstyle_stackbuf"
-			"GPU--unified-cstyle_nobuf"
-			"GPU--unified-eigen_colwise"
-			"GPU--unified-eigen_ranged"
-			# "GPU--unified-eigen_ranged_for_each"
-			# "GPU--unified-eigen_colwise_merged"
-			# "GPU--unified-eigen_anged_for_each_merged"
+			"GPU--native-cstyle_blockbuf"
+			"GPU--unified-cstyle"
+			"GPU--unified-kokkidio_index"
+			"GPU--unified-kokkidio_range"
 		)
 	fi
 	if [[ "$target" != "gpu" ]]; then
 		optkeys+=(
-			"CPU--unified-cstyle_stackbuf"
-			"CPU--unified-cstyle_nobuf"
-			"CPU--unified-eigen_colwise"
-			"CPU--unified-eigen_ranged"
-			# "CPU--unified-eigen_ranged_for_each"
-			# "CPU--unified-eigen_colwise_merged"
-			# "CPU--unified-eigen_anged_for_each_merged"
-			"CPU--native-seq_cstyle"
-			# "CPU--native-seq_manual"
-			"CPU--native-seq_eigen_colwise"
-			"CPU--native-seq_eigen_arrProd"
-			"CPU--native-par_cstyle"
-			# "CPU--native-par_manual"
-			"CPU--native-par_eigen_colwise"
-			"CPU--native-par_eigen_arrProd"
+			"CPU--native-cstyle_seq"
+			"CPU--native-cstyle_par"
+			"CPU--native-eigen_seq_colwise"
+			"CPU--native-eigen_seq_arrProd"
+			"CPU--native-eigen_par_colwise"
+			"CPU--native-eigen_par_arrProd"
+			"CPU--unified-cstyle"
+			"CPU--unified-kokkidio_index"
+			"CPU--unified-kokkidio_range"
 		)
 	fi
 else
 	rows=(1)
 fi
 
+
+
+
+
+
+if [[ "$example" == "norm" ]]; then
+	if [[ "$target" != "cpu" ]]; then
+		optkeys+=(
+			"GPU--native-cstyle_blockbuf"
+			"GPU--unified-cstyle"
+			"GPU--unified-kokkidio_index"
+			"GPU--unified-kokkidio_range"
+		)
+	else
+		optkeys+=(
+			"CPU--native-cstyle_seq"
+			"CPU--native-cstyle_par"
+			"CPU--native-eigen_seq"
+			"CPU--native-eigen_par"
+			"CPU--unified-cstyle"
+			"CPU--unified-kokkidio_index"
+			"CPU--unified-kokkidio_range"
+		)
+	fi
+fi
+
+
 if [[ "$example" == "friction" ]]; then
 	if [[ "$target" != "cpu" ]]; then
-		if [[ "$backend" =~ cuda|hip ]]; then
-			optkeys+=(
-				"GPU--native-cstyle "
-				# "GPU--native-colwise_fullbuf"
-			)
-		fi
+		# if [[ "$backend" =~ cuda|hip ]]; then
+		# 	optkeys+=(
+		# 		"GPU--native-cstyle "
+		# 		# "GPU--native-colwise_fullbuf"
+		# 	)
+		# fi
 		optkeys+=(
+			"GPU--native-cstyle"
+			"GPU--native-eigen_colwise_fullbuf"
 			"GPU--unified-cstyle"
-			"GPU--unified-eigen_colwise_fullbuf"
-			"GPU--unified-eigen_colwise_stackbuf"
-			"GPU--unified-eigen_ranged_fullbuf"
-			"GPU--unified-eigen_ranged_chunkbuf "
-			# "GPU--unified-context_ranged"
+			"GPU--unified-kokkidio_index_fullbuf"
+			"GPU--unified-kokkidio_index_stackbuf"
+			"GPU--unified-kokkidio_range_fullbuf"
+			"GPU--unified-kokkidio_range_chunkbuf"
 		)
 	fi
 	if [[ "$target" != "gpu" ]]; then
 		optkeys+=(
-			"CPU--unified-cstyle"
-			"CPU--unified-eigen_colwise_fullbuf"
-			"CPU--unified-eigen_colwise_stackbuf"
-			"CPU--unified-eigen_ranged_fullbuf"
-			"CPU--unified-eigen_ranged_chunkbuf"
-			# "CPU--unified-context_ranged"
 			"CPU--native-cstyle"
-			# "CPU--native-eigen_colwise_fullbuf"
+			"CPU--native-eigen_ranged_fullbuf"
+			"CPU--unified-cstyle"
+			"CPU--unified-kokkidio_index_fullbuf"
+			"CPU--unified-kokkidio_index_stackbuf"
+			"CPU--unified-kokkidio_range_fullbuf"
+			"CPU--unified-kokkidio_range_chunkbuf"
 		)
 	fi
 fi
+
+
+
+
 
 writeCol () {
 	local outfile=$1
@@ -313,7 +336,7 @@ writeColTitles () {
 		key="${key//[, ]/-}"
 		colTitles+="${sep}${key}"
 	done
-	echo "`basename $1`"$'\n'"$colTitles" > $outfile
+	echo "`basename $1` `uname -n`"$'\n'"$colTitles" > $outfile
 }
 
 grepTiming () {
@@ -340,7 +363,7 @@ for col in "${cols[@]}"
 do
 	echo "$iter$sep$col" >> "$outfile"
 	echo "cols: ${col}, iterations: ${iter}"
-	if [[ "$example" == "dotProduct" ]]; then
+	if [[ "$example" == "dotProduct" ]] || [[ "$example" == "norm" ]]; then
 		output="$("$bin" -s $rows $col -r $iter -t $target)"
 	else
 		output="$("$bin" -s $col -r $iter -t $target)"
