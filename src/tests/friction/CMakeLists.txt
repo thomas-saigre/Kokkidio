@@ -16,7 +16,13 @@ set_is_cpu(
 
 if (KOKKIDIO_USE_CUDA OR KOKKIDIO_USE_HIP)
 	target_sources( friction PRIVATE
-		friction_gpu_cuda_hip.cpp
+		friction_native_cuda_hip.cpp
+	)
+endif()
+
+if (KOKKIDIO_USE_SYCL)
+	target_sources( friction PRIVATE
+		friction_native_sycl.cpp
 	)
 endif()
 
