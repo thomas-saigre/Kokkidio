@@ -41,10 +41,14 @@ void runNorm(const BenchOpts b){
 	};
 
 	RunOpts opts;
-	auto resetOpts = [&](){
-		opts.groupComment = "unified";
+	opts.useGnuplot = b.gnuplot;
+	auto setNat = [&](){
+		opts.groupComment = "native";
 		opts.skipWarmup = false;
-		opts.useGnuplot = b.gnuplot;
+	};
+	auto setUni = [&](){
+		opts.groupComment = "unified";
+		opts.skipWarmup = true;
 	};
 
 	using T = Target;
@@ -52,42 +56,46 @@ void runNorm(const BenchOpts b){
 	/* Run on GPU */
 	#ifndef KOKKIDIO_CPU_ONLY
 	if ( b.target != "cpu" ){
-		resetOpts();
-		runAndTime<norm_unif, T::device, uK
-			, uK::eigen_ranged // first one is for warmup
-			, uK::cstyle
-			, uK::eigen_colwise
-			, uK::eigen_ranged
-		>( opts, pass, mat, b.nRuns );
 		#ifdef KOKKIDIO_USE_CUDAHIP
+		setNat();
 		using gK = gpu::Kernel;
-		opts.groupComment = "native";
-		opts.skipWarmup = true;
 		runAndTime<norm_gpu, T::device, gK
+			, gK::cstyle_blockbuf // first one is for warmup
 			, gK::cstyle_blockbuf
 		>( opts, pass, mat, b.nRuns );
 		#endif
+
+		setUni();
+		#ifndef KOKKIDIO_USE_CUDAHIP
+		opts.skipWarmup = false;
+		#endif
+		runAndTime<norm_unif, T::device, uK
+			// , uK::eigen_ranged // warmup is skipped
+			, uK::cstyle
+			, uK::kokkidio_index
+			, uK::kokkidio_range
+		>( opts, pass, mat, b.nRuns );
 	}
 	#endif
 
+	/* Run on CPU */
 	if ( b.target != "gpu" && b.nCols * b.nRuns <= 25e8 ){
-		/* Run on CPU */
-		resetOpts();
-		runAndTime<norm_unif, T::host, uK
-			, uK::eigen_ranged // first one is for warmup
-			, uK::cstyle
-			, uK::eigen_colwise
-			, uK::eigen_ranged
+		setNat();
+		using cK = cpu::Kernel;
+		runAndTime<norm_cpu, T::host, cK
+			, cK::eigen_par // first one is for warmup
+			, cK::cstyle_seq
+			, cK::cstyle_par
+			, cK::eigen_seq
+			, cK::eigen_par
 		>( opts, pass, mat, b.nRuns );
 
-		using cK = cpu::Kernel;
-		opts.groupComment = "native";
-		opts.skipWarmup = true;
-		runAndTime<norm_cpu, T::host, cK
-			, cK::seq_cstyle
-			, cK::seq_eigen
-			, cK::par_cstyle
-			, cK::par_eigen
+		setUni();
+		runAndTime<norm_unif, T::host, uK
+			// , uK::eigen_ranged // warmup is skipped
+			, uK::cstyle
+			, uK::kokkidio_index
+			, uK::kokkidio_range
 		>( opts, pass, mat, b.nRuns );
 	}
 

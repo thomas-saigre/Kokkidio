@@ -14,7 +14,8 @@ namespace unif
 enum class Kernel {
 	cstyle,
 	kokkos,
-	kokkidio,
+	kokkidio_index,
+	kokkidio_range,
 };
 
 template<Target, Kernel>
@@ -28,10 +29,10 @@ namespace cpu
 {
 
 enum class Kernel {
-	cstyle_sequential,
-	cstyle_parallel,
-	eigen_sequential,
-	eigen_parallel
+	cstyle_seq,
+	cstyle_par,
+	eigen_seq,
+	eigen_par
 };
 
 template<Target, Kernel>

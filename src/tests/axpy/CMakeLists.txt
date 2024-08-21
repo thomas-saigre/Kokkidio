@@ -31,6 +31,5 @@ endif()
 # 	)
 # endif()
 
-kokkidio_configure_target(axpy)
-set_warnings(axpy)
+conf(axpy)
 

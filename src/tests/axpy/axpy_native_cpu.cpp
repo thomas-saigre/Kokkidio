@@ -7,7 +7,7 @@ using K = Kernel;
 constexpr Target host { Target::host };
 
 template<>
-void axpy<host, K::cstyle_sequential>(KOKKIDIO_AXPY_ARGS){
+void axpy<host, K::cstyle_seq>(KOKKIDIO_AXPY_ARGS){
 
 	for (volatile int run = 0; run < nRuns; ++run){
 		scalar* zptr { z.data() };
@@ -22,7 +22,7 @@ void axpy<host, K::cstyle_sequential>(KOKKIDIO_AXPY_ARGS){
 }
 
 template<>
-void axpy<host, K::cstyle_parallel>(KOKKIDIO_AXPY_ARGS){
+void axpy<host, K::cstyle_par>(KOKKIDIO_AXPY_ARGS){
 
 	for (volatile int run = 0; run < nRuns; ++run){
 		scalar* zptr { z.data() };
@@ -38,14 +38,14 @@ void axpy<host, K::cstyle_parallel>(KOKKIDIO_AXPY_ARGS){
 }
 
 template<>
-void axpy<host, K::eigen_sequential>(KOKKIDIO_AXPY_ARGS){
+void axpy<host, K::eigen_seq>(KOKKIDIO_AXPY_ARGS){
 	for (volatile int run = 0; run < nRuns; ++run){
 		z = a * x + y;
 	}
 }
 
 template<>
-void axpy<host, K::eigen_parallel>(KOKKIDIO_AXPY_ARGS){
+void axpy<host, K::eigen_par>(KOKKIDIO_AXPY_ARGS){
 
 	for (volatile int run = 0; run < nRuns; ++run){
 		KOKKIDIO_OMP_PRAGMA(parallel)

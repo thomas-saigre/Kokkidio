@@ -33,7 +33,7 @@ scalar dotProduct(
 	};
 
 	using K = Kernel;
-	if constexpr (k == K::eigen_colwise_merged || k == K::eigen_ranged_for_each_merged){
+	if constexpr (k == K::kokkidio_index_merged || k == K::kokkidio_range_for_each_merged){
 		printd("running merged.\n");
 		/* Create matrix m12 to store both m1 and m2.
 		 * DualViewMap is used, so allocation is done automatically,
@@ -44,7 +44,7 @@ scalar dotProduct(
 		/* Copy data to device */
 		m12.copyToTarget();
 		
-		if constexpr (k == K::eigen_ranged_for_each_merged){
+		if constexpr (k == K::kokkidio_range_for_each_merged){
 			printd("running unified-range-coalesced.\n");
 			auto func = KOKKOS_LAMBDA( ParallelRange<target> rng, scalar& sum ){
 
@@ -59,7 +59,7 @@ scalar dotProduct(
 			};
 			reduce(func);
 		} else 
-		if constexpr (k == K::eigen_colwise_merged){
+		if constexpr (k == K::kokkidio_index_merged){
 			printd("running unified-coalesced.\n");
 			/* "split" into first (top) and second (bottom) matrix */
 			auto func = KOKKOS_LAMBDA(int i, scalar& sum){
@@ -82,7 +82,7 @@ scalar dotProduct(
 			m1view {m1},
 			m2view {m2};
 
-		if constexpr (k == K::eigen_colwise){
+		if constexpr (k == K::kokkidio_index){
 			printd("running unified-normal/colwise.\n");
 			auto func = KOKKOS_LAMBDA(int i, scalar& sum){
 				/* Map raw data to const MatrixXs objects
@@ -94,7 +94,7 @@ scalar dotProduct(
 			};
 			reduce(func);
 		} else
-		if constexpr (k == K::eigen_ranged_for_each){
+		if constexpr (k == K::kokkidio_range_for_each){
 			printd("running unified-range-normal/colwise.\n");
 			auto func = KOKKOS_LAMBDA(ParallelRange<target> rng, scalar& sum){
 				/* Map raw data to const MatrixXs objects
@@ -110,7 +110,7 @@ scalar dotProduct(
 			};
 			reduce(func);
 		} else 
-		if constexpr (k == K::eigen_ranged){
+		if constexpr (k == K::kokkidio_range){
 			printd("running unified-range-arrProd.\n");
 			auto func = KOKKOS_LAMBDA(ParallelRange<target> rng, scalar& sum){
 				/* Using EigenRange::operator() on an ViewMap 
@@ -121,7 +121,7 @@ scalar dotProduct(
 			};
 			reduce(func);
 		} else 
-		if constexpr (k == K::eigen_ranged_chunks){
+		if constexpr (k == K::kokkidio_range_chunks){
 			printd("running unified-range-arrProd.\n");
 			auto func = KOKKOS_LAMBDA(Kokkidio::Chunk<target> rng, scalar& sum){
 				/* Using ParallelRange::operator() on an ViewMap or DualViewMap 
@@ -132,6 +132,13 @@ scalar dotProduct(
 				result = 0;
 				parallel_reduce_chunks<target>( nCols, func, redux::sum(result) );
 			}
+		} else 
+		if constexpr (k == K::kokkidio_range_trace){
+			printd("running unified-range-arrProd.\n");
+			auto func = KOKKOS_LAMBDA(ParallelRange<target> rng, scalar& sum){
+				sum += ( rng(m1view).transpose() * rng(m2view) ).trace();
+			};
+			reduce(func);
 		} else 
 		if constexpr (k == K::cstyle_nobuf){
 			printd("running cstyle (no buffer).\n");
@@ -150,8 +157,8 @@ scalar dotProduct(
 			};
 			reduce(func);
 		} else
-		if constexpr (k == K::cstyle_stackbuf){
-			printd("running cstyle (stack buffer).\n");
+		if constexpr (k == K::cstyle){
+			printd("running cstyle (stack var, single write to sum var).\n");
 			/* Every thread calculates it's column j */
 			auto func = KOKKOS_LAMBDA(int j, scalar& sum){
 				const scalar
@@ -180,14 +187,15 @@ template scalar dotProduct<CTARGET, KERNEL>( \
 	const MatrixXs& m1, const MatrixXs& m2, int nRuns);
 
 
+KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::cstyle)
 KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::cstyle_nobuf)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::cstyle_stackbuf)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::eigen_colwise)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::eigen_colwise_merged)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::eigen_ranged)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::eigen_ranged_chunks)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::eigen_ranged_for_each)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::eigen_ranged_for_each_merged)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::kokkidio_index)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::kokkidio_index_merged)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::kokkidio_range)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::kokkidio_range_trace)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::kokkidio_range_chunks)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::kokkidio_range_for_each)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_DOTPRODUCT_TARGET, Kernel::kokkidio_range_for_each_merged)
 
 
 #undef KOKKIDIO_INSTANTIATE

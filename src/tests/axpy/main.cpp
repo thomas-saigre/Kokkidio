@@ -3,6 +3,8 @@
 
 #include "axpy.hpp"
 
+#include "testMacros.hpp"
+
 namespace Kokkidio
 {
 
@@ -10,10 +12,11 @@ KOKKIDIO_FUNC_WRAPPER(axpy_unif, unif::axpy)
 KOKKIDIO_FUNC_WRAPPER(axpy_cpu ,  cpu::axpy)
 KOKKIDIO_FUNC_WRAPPER(axpy_gpu ,  gpu::axpy)
 
+constexpr auto axpyStr { std::is_same_v<scalar, float> ? "saxpy" : "daxpy" };
 
 void run_axpy(const BenchOpts b){
 	if ( !b.gnuplot ){
-		std::cout << "Running saxpy/daxpy benchmark...\n";
+		std::cout << "Running " << axpyStr << " benchmark...\n";
 	}
 
 	scalar a, z_correct;
@@ -50,10 +53,14 @@ void run_axpy(const BenchOpts b){
 	};
 
 	RunOpts opts;
-	auto resetOpts = [&](){
-		opts.groupComment = "unified";
+	opts.useGnuplot = b.gnuplot;
+	auto setNat = [&](){
+		opts.groupComment = "native";
 		opts.skipWarmup = false;
-		opts.useGnuplot = b.gnuplot;
+	};
+	auto setUni = [&](){
+		opts.groupComment = "unified";
+		opts.skipWarmup = true;
 	};
 
 	using T = Target;
@@ -61,51 +68,56 @@ void run_axpy(const BenchOpts b){
 	/* Run on GPU */
 	#ifndef KOKKIDIO_CPU_ONLY
 	if ( b.target != "cpu" ){
-		resetOpts();
-		runAndTime<axpy_unif, T::device, uK
-			, uK::cstyle // first one is for warmup
-			, uK::cstyle
-			, uK::kokkos
-			, uK::kokkidio
+		setNat();
+		using gK = gpu::Kernel;
+		runAndTime<axpy_gpu, T::device, gK
+			, gK::cstyle // first one is for warmup
+			, gK::cstyle
 		>( opts, pass, z, a, x, y, b.nRuns );
 
-		using gK = gpu::Kernel;
-		opts.groupComment = "native";
-		opts.skipWarmup = true;
-		// opts.skipWarmup = false;
-		runAndTime<axpy_gpu, T::device, gK
-			// , gK::cstyle
-			, gK::cstyle
+		setUni();
+		runAndTime<axpy_unif, T::device, uK
+			// , uK::cstyle // warmup is skipped
+			, uK::cstyle
+			KRUN_IF_ALL(
+			, uK::kokkos
+			)
+			, uK::kokkidio_index
+			, uK::kokkidio_range
 		>( opts, pass, z, a, x, y, b.nRuns );
 	}
 	#endif
 
+	/* Run on CPU */
 	if ( b.target != "gpu" && (z.size() <= 1000 * 1000 * 1000 || b.nRuns <= 500) ){
-		/* Run on CPU */
-		resetOpts();
-		runAndTime<axpy_unif, T::host, uK
-			, uK::cstyle // first one is for warmup
-			, uK::cstyle
-			, uK::kokkos
-			, uK::kokkidio
-		>( opts, pass, z, a, x, y, b.nRuns );
-
+		setNat();
 		using cK = cpu::Kernel;
 		opts.groupComment = "native";
 		opts.skipWarmup = true;
 		runAndTime<axpy_cpu, T::host, cK
-			// , cK::cstyle_parallel // warmup is skipped
-			, cK::cstyle_sequential
-			, cK::cstyle_parallel
-			, cK::eigen_sequential
-			, cK::eigen_parallel
+			, cK::eigen_par // first one is for warmup
+			, cK::cstyle_seq
+			, cK::cstyle_par
+			, cK::eigen_seq
+			, cK::eigen_par
+		>( opts, pass, z, a, x, y, b.nRuns );
+
+		setUni();
+		runAndTime<axpy_unif, T::host, uK
+			// , uK::cstyle // warmup is skipped
+			, uK::cstyle
+			KRUN_IF_ALL(
+			, uK::kokkos
+			)
+			, uK::kokkidio_index
+			, uK::kokkidio_range
 		>( opts, pass, z, a, x, y, b.nRuns );
 	}
 
 	if (!b.gnuplot){
 		std::cout
-			<< "saxpy/daxpy result:\n" << z_correct << '\n'
-			<< "saxpy/daxpy: Finished runs.\n\n";
+			<< axpyStr << " result:\n" << z_correct << '\n'
+			<< axpyStr << ": Finished runs.\n\n";
 	}
 }
 

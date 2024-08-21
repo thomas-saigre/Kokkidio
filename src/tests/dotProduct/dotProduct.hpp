@@ -12,16 +12,14 @@ namespace cpu
 {
 
 enum class Kernel {
-	seq_cstyle,
-	// seq_manual,
-	seq_eigen_colwise,
-	seq_eigen_arrProd,
-	par_cstyle,
-	// par_manual,
-	par_eigen_colwise,
-	// par_eigen_colwise_ranged,
-	par_eigen_arrProd,
-	// par_eigen_arrProd_ranged,
+	cstyle_seq,
+	cstyle_par,
+	eigen_seq_colwise,
+	eigen_seq_arrProd,
+	eigen_par_colwise,
+	// eigen_par_colwise_ranged,
+	eigen_par_arrProd,
+	// eigen_par_arrProd_ranged,
 };
 
 template<Target target, Kernel k>
@@ -48,14 +46,15 @@ namespace unif
 {
 
 enum class Kernel {
+	cstyle,
 	cstyle_nobuf,
-	cstyle_stackbuf,
-	eigen_colwise,
-	eigen_colwise_merged,
-	eigen_ranged,
-	eigen_ranged_chunks,
-	eigen_ranged_for_each,
-	eigen_ranged_for_each_merged,
+	kokkidio_index,
+	kokkidio_index_merged,
+	kokkidio_range,
+	kokkidio_range_chunks,
+	kokkidio_range_for_each,
+	kokkidio_range_for_each_merged,
+	kokkidio_range_trace,
 };
 
 template<Target target, Kernel k>

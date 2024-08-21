@@ -33,7 +33,7 @@ void friction(
 	Index nCols { flux_out.cols() };
 
 	Index bufRows;
-	if (k == K::eigen_colwise_fullbuf || k == K::eigen_ranged_fullbuf){
+	if (k == K::kokkidio_index_fullbuf || k == K::kokkidio_range_fullbuf){
 		bufRows = 3;
 	} else {
 		bufRows = 0;
@@ -95,7 +95,7 @@ void friction(
 		};
 		run(func);
 	} else
-	if constexpr ( k == K::eigen_colwise_fullbuf ){
+	if constexpr ( k == K::kokkidio_index_fullbuf ){
 		auto func = KOKKOS_LAMBDA(int i){
 			FRIC_DECLARE_MAPS
 
@@ -110,7 +110,7 @@ void friction(
 		};
 		run(func);
 	} else
-	if constexpr ( k == K::eigen_colwise_stackbuf ){
+	if constexpr ( k == K::kokkidio_index_stackbuf ){
 		auto func = KOKKOS_LAMBDA(int i){
 			FRIC_DECLARE_MAPS_NOBUF
 
@@ -125,7 +125,7 @@ void friction(
 		};
 		run(func);
 	} else
-	if constexpr ( k == K::eigen_ranged_fullbuf ){
+	if constexpr ( k == K::kokkidio_range_fullbuf ){
 		auto func = KOKKOS_LAMBDA( ParallelRange<target> rng ){
 			// FRIC_DECLARE_MAPS
 
@@ -143,7 +143,7 @@ void friction(
 		static_assert( detail::is_range_target_invocable<decltype(func), Target::device> );
 		run(func);
 	} else
-	if constexpr ( k == K::eigen_ranged_chunkbuf ){
+	if constexpr ( k == K::kokkidio_range_chunkbuf ){
 		auto chunkBuf { makeBuffer<Array3s, target>(nCols) };
 		// auto func = KOKKOS_LAMBDA( ParallelRange<target> rng ){
 
@@ -192,10 +192,10 @@ void friction(
 template void friction<CTARGET, KERNEL>(KOKKIDIO_FRICTION_ARGS);
 
 KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::cstyle)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::eigen_colwise_fullbuf)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::eigen_colwise_stackbuf)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::eigen_ranged_fullbuf)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::eigen_ranged_chunkbuf)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::kokkidio_index_fullbuf)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::kokkidio_index_stackbuf)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::kokkidio_range_fullbuf)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_FRICTION_TARGET, Kernel::kokkidio_range_chunkbuf)
 
 
 #undef KOKKIDIO_INSTANTIATE

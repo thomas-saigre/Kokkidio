@@ -27,5 +27,4 @@ if(NOT KOKKIDIO_CPU_ONLY)
 	)
 endif()
 
-kokkidio_configure_target(friction)
-set_warnings(friction)
+conf(friction)

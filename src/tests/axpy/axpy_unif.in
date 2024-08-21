@@ -49,7 +49,13 @@ void axpy(KOKKIDIO_AXPY_ARGS){
 			Kokkos::parallel_for(policy, func);
 		}
 	} else
-	if constexpr (k == K::kokkidio){
+	if constexpr (k == K::kokkidio_index){
+		auto func = KOKKOS_LAMBDA(int i){
+			zview.map()(i) = a * xview.map()(i) + yview.map()(i);
+		};
+		run(func);
+	} else
+	if constexpr (k == K::kokkidio_range){
 		auto func = KOKKOS_LAMBDA( ParallelRange<target> rng ){
 			rng(zview) = a * rng(xview) + rng(yview);
 		};
@@ -65,7 +71,8 @@ template void axpy<CTARGET, KERNEL>(KOKKIDIO_AXPY_ARGS);
 
 KOKKIDIO_INSTANTIATE(KOKKIDIO_AXPY_TARGET, Kernel::cstyle)
 KOKKIDIO_INSTANTIATE(KOKKIDIO_AXPY_TARGET, Kernel::kokkos)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_AXPY_TARGET, Kernel::kokkidio)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_AXPY_TARGET, Kernel::kokkidio_index)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_AXPY_TARGET, Kernel::kokkidio_range)
 
 
 #undef KOKKIDIO_INSTANTIATE

@@ -7,10 +7,23 @@ message(STATUS "Kokkidio_DIR: ${Kokkidio_DIR}")
 
 message(STATUS "Using CXX compiler: ${CMAKE_CXX_COMPILER}")
 
+option(KOKKIDIO_RUN_ALL_TESTS "Run all test implementations" OFF)
+message(STATUS "KOKKIDIO_RUN_ALL_TESTS=${KOKKIDIO_RUN_ALL_TESTS}")
+
 macro(set_warnings TARGET_NAME)
 	target_compile_options( ${TARGET_NAME} PRIVATE
 	-Wall -Wextra -Wno-deprecated-declarations
 	)
+endmacro()
+
+macro(conf TARGET_NAME)
+	set_warnings(${TARGET_NAME})
+	kokkidio_configure_target(${TARGET_NAME})
+	if(KOKKIDIO_RUN_ALL_TESTS)
+		target_compile_definitions(${TARGET_NAME} PRIVATE
+			KOKKIDIO_RUN_ALL_TESTS=1
+		)
+	endif()
 endmacro()
 
 include_directories(

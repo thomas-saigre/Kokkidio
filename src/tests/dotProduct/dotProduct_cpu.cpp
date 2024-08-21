@@ -9,7 +9,7 @@ constexpr Target host { Target::host };
 
 /* Sequential CPU calculation */
 template<>
-scalar dotProduct<host, K::seq_cstyle>(
+scalar dotProduct<host, K::cstyle_seq>(
 	const MatrixXs& m1, const MatrixXs& m2, int iterations
 ){
 	scalar finalResult_cpu {0};
@@ -46,7 +46,7 @@ scalar dotProduct<host, K::seq_cstyle>(
 // }
 
 template<>
-scalar dotProduct<host, K::seq_eigen_colwise>(
+scalar dotProduct<host, K::eigen_seq_colwise>(
 	const MatrixXs& m1, const MatrixXs& m2, int iterations
 ){
 	scalar finalResult_cpu {0};
@@ -60,7 +60,7 @@ scalar dotProduct<host, K::seq_eigen_colwise>(
 }
 
 template<>
-scalar dotProduct<host, K::seq_eigen_arrProd>(
+scalar dotProduct<host, K::eigen_seq_arrProd>(
 	const MatrixXs& m1, const MatrixXs& m2, int iterations
 ){
 	scalar finalResult_cpu {0};

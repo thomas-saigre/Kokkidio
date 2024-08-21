@@ -30,6 +30,5 @@ if (KOKKIDIO_USE_OMPT)
 	)
 endif()
 
-kokkidio_configure_target(dotProduct PRIVATE)
-set_warnings(dotProduct)
+conf(dotProduct)
 

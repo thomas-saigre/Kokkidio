@@ -16,7 +16,7 @@ constexpr Target host { Target::host };
 /* Parallel CPU calculation option 1*/
 
 template<>
-scalar dotProduct<host, K::par_colwise_ranged>(
+scalar dotProduct<host, K::eigen_par_colwise_ranged>(
 	const MatrixXs& m1, const MatrixXs& m2, int iterations
 ){
 	volatile scalar finalResult_cpu;
@@ -56,7 +56,7 @@ scalar dotProduct<host, K::par_colwise_ranged>(
 
 /* Parallel CPU calculation option 2 */
 template<>
-scalar dotProduct<host, K::par_arrProd_ranged>(
+scalar dotProduct<host, K::eigen_par_arrProd_ranged>(
 	const MatrixXs& m1, const MatrixXs& m2, int iterations
 ){
 	volatile scalar finalResult_cpu;

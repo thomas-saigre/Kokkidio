@@ -59,7 +59,15 @@ void friction( KOKKIDIO_FRICTION_ARGS );
 
 namespace unif
 {
-using fric::Kernel;
+
+enum class Kernel {
+	cstyle,
+	kokkidio_index_stackbuf,
+	kokkidio_index_fullbuf,
+	kokkidio_range_fullbuf,
+	kokkidio_range_chunkbuf,
+	context_ranged,
+};
 
 template<Target target, Kernel k>
 void friction( KOKKIDIO_FRICTION_ARGS );

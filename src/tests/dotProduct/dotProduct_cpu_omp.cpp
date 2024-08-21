@@ -14,7 +14,7 @@ using K = Kernel;
 constexpr Target host { Target::host };
 
 template<>
-scalar dotProduct<host, K::par_cstyle>(
+scalar dotProduct<host, K::cstyle_par>(
 	const MatrixXs& m1, const MatrixXs& m2, int iterations
 ){
 	assert( m1.rows() == m2.rows() );
@@ -50,40 +50,11 @@ scalar dotProduct<host, K::par_cstyle>(
 	return finalResult_cpu;
 }
 
-// template<>
-// scalar dotProduct<host, K::par_manual>(
-// 	const MatrixXs& m1, const MatrixXs& m2, int iterations
-// ){
-// 	assert( m1.rows() == m2.rows() );
-// 	assert( m1.cols() == m2.cols() );
-
-// 	volatile scalar finalResult_cpu;
-
-// 	for (volatile int iter = 0; iter < iterations; ++iter){
-// 		finalResult_cpu = 0.0;
-// 		KOKKIDIO_OMP_PRAGMA(parallel)
-// 		{
-// 			scalar thread_sum{0};
-// 			KOKKIDIO_OMP_PRAGMA(for)
-// 			for (int col = 0; col < m1.cols(); ++col){
-// 			for (int row = 0; row < m1.rows(); ++row){
-// 				thread_sum += m1(row, col) * m2(row, col);
-// 			}}
-// 			KOKKIDIO_OMP_PRAGMA(atomic)
-// 			finalResult_cpu += thread_sum;
-// 			// KOKKIDIO_OMP_PRAGMA( for reduction(+ : finalResult_cpu) )
-// 			// for (int np = 0; np < omp_get_num_threads(); ++np){
-// 			// 	finalResult_cpu += thread_sum;
-// 			// }
-// 		}
-// 	}
-// 	return finalResult_cpu;
-// }
 
 /* Parallel CPU calculation option 1*/
 
 template<>
-scalar dotProduct<host, K::par_eigen_colwise>(
+scalar dotProduct<host, K::eigen_par_colwise>(
 	const MatrixXs& m1, const MatrixXs& m2, int iterations
 ){
 	volatile scalar finalResult_cpu;
@@ -120,7 +91,7 @@ scalar dotProduct<host, K::par_eigen_colwise>(
 /* Parallel CPU calculation option 2 */
 
 template<>
-scalar dotProduct<host, K::par_eigen_arrProd>(
+scalar dotProduct<host, K::eigen_par_arrProd>(
 	const MatrixXs& m1, const MatrixXs& m2, int iterations
 ){
 	volatile scalar finalResult_cpu;

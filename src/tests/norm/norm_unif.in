@@ -29,15 +29,15 @@ scalar norm(const MatrixXs& mat, int nRuns){
 
 	using K = Kernel;
 
-	if constexpr (k == K::eigen_colwise){
-		printd("running unified-eigen_colwise.\n");
+	if constexpr (k == K::kokkidio_index){
+		printd("running unified-kokkidio_index.\n");
 		auto func = KOKKOS_LAMBDA(int i, scalar& max){
 			max = std::max( max, map.map().col(i).norm() );
 		};
 		reduce(func);
 	} else
-	if constexpr (k == K::eigen_ranged){
-		printd("running unified-eigen_ranged.\n");
+	if constexpr (k == K::kokkidio_range){
+		printd("running unified-kokkidio_range.\n");
 		auto func = KOKKOS_LAMBDA(ParallelRange<target> rng, scalar& max){
 			max = std::max( max, rng(map).colwise().norm().maxCoeff() );
 		};
@@ -68,8 +68,8 @@ template scalar norm<CTARGET, KERNEL>( const MatrixXs& mat, int nRuns);
 
 
 KOKKIDIO_INSTANTIATE(KOKKIDIO_NORM_TARGET, Kernel::cstyle)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_NORM_TARGET, Kernel::eigen_colwise)
-KOKKIDIO_INSTANTIATE(KOKKIDIO_NORM_TARGET, Kernel::eigen_ranged)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_NORM_TARGET, Kernel::kokkidio_index)
+KOKKIDIO_INSTANTIATE(KOKKIDIO_NORM_TARGET, Kernel::kokkidio_range)
 
 
 #undef KOKKIDIO_INSTANTIATE

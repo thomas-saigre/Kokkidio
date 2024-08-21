@@ -3,6 +3,8 @@
 
 #include "friction.hpp"
 
+#include "testMacros.hpp"
+
 namespace Kokkidio
 {
 
@@ -63,38 +65,26 @@ void runFric(const BenchOpts& b){
 	};
 
 	RunOpts opts;
-	auto resetOpts = [&](){
-		opts.groupComment = "unified";
+	opts.useGnuplot = b.gnuplot;
+	auto setNat = [&](){
+		opts.groupComment = "native";
 		opts.skipWarmup = false;
-		opts.useGnuplot = b.gnuplot;
+	};
+	auto setUni = [&](){
+		opts.groupComment = "unified";
+		opts.skipWarmup = true;
 	};
 
 	// using T = Target;
 	using K = fric::Kernel;
-	/* GPU computation */
+	using uK = unif::Kernel;
+	/* Run on GPU */
 	#ifndef KOKKIDIO_CPU_ONLY
 	if ( b.target != "cpu" ){
-		resetOpts();
-		runAndTime<fric_unif, Target::device, K
-			, K::eigen_ranged_chunkbuf // first one is for warmup
-			// #ifndef KOKKIDIO_USE_SYCL
-			, K::cstyle
-			// #endif
-			, K::eigen_colwise_fullbuf
-			, K::eigen_colwise_stackbuf
-			, K::eigen_ranged_fullbuf
-			, K::eigen_ranged_chunkbuf
-			, K::context_ranged
-		>(
-			opts, pass,
-			flux_out, flux_in, d, v, n, b.nRuns
-		);
-
-		/* non-unified */
 		#ifdef KOKKIDIO_USE_CUDAHIP
-		opts.groupComment = "native";
-		opts.skipWarmup = true;
+		setNat();
 		runAndTime<fric_gpu, Target::device, K
+			, K::cstyle // first one is for warmup
 			, K::cstyle
 			, K::eigen_colwise_fullbuf
 		>(
@@ -102,35 +92,57 @@ void runFric(const BenchOpts& b){
 			flux_out, flux_in, d, v, n, b.nRuns
 		);
 		#endif
+
+		setUni();
+		#ifndef KOKKIDIO_USE_CUDAHIP
+		opts.skipWarmup = false;
+		#endif
+		runAndTime<fric_unif, Target::device, uK
+			// , K::eigen_ranged_chunkbuf // warmup is skipped
+			// #ifndef KOKKIDIO_USE_SYCL
+			, uK::cstyle
+			// #endif
+			, uK::kokkidio_index_fullbuf
+			, uK::kokkidio_index_stackbuf
+			, uK::kokkidio_range_fullbuf
+			, uK::kokkidio_range_chunkbuf
+			KRUN_IF_ALL(
+			, uK::context_ranged
+			)
+		>(
+			opts, pass,
+			flux_out, flux_in, d, v, n, b.nRuns
+		);
 	}
 	#endif
 
+	/* Run on CPU */
 	if ( b.target != "gpu" && b.nCols * b.nRuns <= 25e8 ){
-		resetOpts();
-		runAndTime<fric_unif, Target::host, K
-			, K::eigen_ranged_chunkbuf // first one is for warmup
-			, K::cstyle
-			, K::eigen_colwise_fullbuf // painfully slow
-			, K::eigen_colwise_stackbuf // painfully slow
-			, K::eigen_ranged_fullbuf
-			, K::eigen_ranged_chunkbuf
-			, K::context_ranged
-		>(
-			opts, pass,
-			flux_out, flux_in, d, v, n, b.nRuns
-		);
-		/* non-unified */
-		// #ifdef KOKKIDIO_USE_OMPT
-		opts.groupComment = "native";
-		opts.skipWarmup = true;
+		setNat();
 		runAndTime<fric_cpu, Target::host, K
+			, K::cstyle // first one is for warmup
 			, K::cstyle
-			// , K::eigen_ranged_fullbuf
+			, K::eigen_ranged_fullbuf
 		>(
 			opts, pass,
 			flux_out, flux_in, d, v, n, b.nRuns
 		);
-		// #endif
+
+		setUni();
+		runAndTime<fric_unif, Target::host, uK
+			// , K::eigen_ranged_chunkbuf // warmup is skipped
+			, uK::cstyle
+			, uK::kokkidio_index_fullbuf  // painfully slow
+			, uK::kokkidio_index_stackbuf // painfully slow
+			, uK::kokkidio_range_fullbuf
+			, uK::kokkidio_range_chunkbuf
+			KRUN_IF_ALL(
+			, uK::context_ranged
+			)
+		>(
+			opts, pass,
+			flux_out, flux_in, d, v, n, b.nRuns
+		);
 	}
 
 

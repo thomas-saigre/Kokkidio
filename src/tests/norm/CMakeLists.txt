@@ -24,5 +24,4 @@ if(NOT KOKKIDIO_CPU_ONLY)
 	)
 endif()
 
-kokkidio_configure_target(norm)
-set_warnings(norm)
+conf(norm)

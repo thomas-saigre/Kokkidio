@@ -519,6 +519,16 @@ build_tests () {
 	cmakeFlags+=" -DKokkos_ROOT=$Kokkos_ROOT"
 	cmakeFlags+=" -DKokkidio_ROOT=$Kokkidio_ROOT"
 
+	if [[ $backend_default == cuda ]] && [[ $backend =~ ompt|sycl ]]; then
+		runbuild=Release
+	else
+		runbuild=Debug
+	fi
+
+	if [[ $buildtype == $runbuild ]]; then
+		cmakeFlags+=" -DKOKKIDIO_RUN_ALL_TESTS=ON"
+	fi
+
 	echo "Running build commands..."
 	build_cmake "$builddir" "$sd/src/tests"
 
@@ -534,18 +544,14 @@ build_tests () {
 
 	echo "Finished compilation for ${backend^^}, build type \"$buildtype\", scalar type \"$scalar\"."
 
-	if [[ $backend =~ ompt|sycl ]]; then
-		runbuild=Release
-	else
-		runbuild=Debug
-	fi
-
 	if [[ $noRun != true ]] && [[ $buildtype == $runbuild ]]; then
 		echo "Performing test runs in $buildtype mode..."
 		# Without these OMP settings, Kokkos complains about their absence.
 		export OMP_PROC_BIND=spread 
 		export OMP_PLACES=threads
+		$builddir/axpy/axpy --size 4 50 --runs 2
 		$builddir/dotProduct/dotProduct --size 4 50 --runs 2
+		$builddir/norm/norm --size 50 --runs 2
 		$builddir/friction/friction --size 50 --runs 2
 		echo "Test runs in $buildtype mode finished."
 	fi

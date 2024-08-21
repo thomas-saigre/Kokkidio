@@ -35,5 +35,4 @@ endif()
 # 	)
 # endif()
 
-kokkidio_configure_target(redux)
-set_warnings(redux)
+conf(redux)

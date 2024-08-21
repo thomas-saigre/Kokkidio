@@ -11,7 +11,7 @@ constexpr scalar smin { std::numeric_limits<scalar>::lowest() };
 
 /* Sequential CPU calculation */
 template<>
-scalar norm<host, K::seq_cstyle>(const MatrixXs& mat, int nRuns){
+scalar norm<host, K::cstyle_seq>(const MatrixXs& mat, int nRuns){
 	scalar result {0};
 
 	Index
@@ -35,7 +35,7 @@ scalar norm<host, K::seq_cstyle>(const MatrixXs& mat, int nRuns){
 }
 
 template<>
-scalar norm<host, K::seq_eigen>(const MatrixXs& mat, int nRuns){
+scalar norm<host, K::eigen_seq>(const MatrixXs& mat, int nRuns){
 	scalar result {smin};
 
 	for (volatile int run = 0; run < nRuns; ++run){
@@ -45,7 +45,7 @@ scalar norm<host, K::seq_eigen>(const MatrixXs& mat, int nRuns){
 }
 
 template<>
-scalar norm<host, K::par_cstyle>(const MatrixXs& mat, int nRuns){
+scalar norm<host, K::cstyle_par>(const MatrixXs& mat, int nRuns){
 	scalar result {smin};
 
 	Index
@@ -78,7 +78,7 @@ scalar norm<host, K::par_cstyle>(const MatrixXs& mat, int nRuns){
 }
 
 template<>
-scalar norm<host, K::par_eigen>(const MatrixXs& mat, int nRuns){
+scalar norm<host, K::eigen_par>(const MatrixXs& mat, int nRuns){
 	scalar result {smin};
 
 	for (volatile int run = 0; run < nRuns; ++run){
