@@ -81,7 +81,6 @@ void runFric(const BenchOpts& b){
 	/* Run on GPU */
 	#ifndef KOKKIDIO_CPU_ONLY
 	if ( b.target != "cpu" ){
-		#ifdef KOKKIDIO_USE_CUDAHIP
 		setNat();
 		runAndTime<fric_gpu, Target::device, K
 			, K::cstyle // first one is for warmup
@@ -91,14 +90,10 @@ void runFric(const BenchOpts& b){
 			opts, pass,
 			flux_out, flux_in, d, v, n, b.nRuns
 		);
-		#endif
 
 		setUni();
-		// #ifndef KOKKIDIO_USE_CUDAHIP
-		opts.skipWarmup = false;
-		// #endif
 		runAndTime<fric_unif, Target::device, uK
-			, uK::kokkidio_range_chunkbuf // warmup is skipped
+			// , uK::kokkidio_range_chunkbuf // warmup is skipped
 			// #ifndef KOKKIDIO_USE_SYCL
 			, uK::cstyle
 			// #endif

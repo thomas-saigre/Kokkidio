@@ -37,17 +37,29 @@ scalar dotProduct<dev, K::cstyle_blockbuf>(
 	 * because it will never automatically contain the actual sum result,
 	 * but apparently that's how the buffer is created. */
 	scalar sumResult {0};
+	sycl::buffer<scalar> sumBuf { &sumResult, 1 };
 	
 	for (int iter = 0; iter < nRuns; ++iter){
 		sumResult = 0;
-		/* I didn't find a way to reset this buffer,
-		 * as get_access(cgh) caused a segfault.
-		 * So instead, we construct it in every iteration
-		 * and hope that the overhead is small... */
-		sycl::buffer<scalar> sumBuf { &sumResult, 1 };
+		// /* I didn't find a way to reset this buffer,
+		//  * as get_access(cgh) caused a segfault.
+		//  * So instead, we construct it in every iteration
+		//  * and hope that the overhead is small... */
+		// sycl::buffer<scalar> sumBuf { &sumResult, 1 };
+
+		// /* host side buffer reset */
+		// sumBuf.set_final_data(&sumResult);
+		// sumBuf.set_write_back(true);
+
+		/* device side buffer reset */
+		queue.submit( [&](sycl::handler& cgh){
+			auto sumAcc = sumBuf.get_access<sycl::access::mode::read_write>(cgh);
+			cgh.single_task( [=](){
+				sumAcc[0] = 0;
+			});
+		});
 
 		queue.submit( [&](sycl::handler& cgh){
-			// sumBuf.get_access(cgh)[0] = 0;
 			/* using the combiner sycl::plus, 
 			 * we create an object with the reduction interface - 
 			 * a "reduction variable" */
@@ -67,9 +79,9 @@ scalar dotProduct<dev, K::cstyle_blockbuf>(
 						dot_product += m1_d[idx] * m2_d[idx];
 					}
 					/* we only write to the result variable once (per column) */
-					sum += dot_product;
-					// /* equivalent, and more general: */
-					// sum.combine(dot_product);
+					// sum += dot_product;
+					/* equivalent, and more general: */
+					sum.combine(dot_product);
 				}
 			);
 		} ).wait();
@@ -80,9 +92,9 @@ scalar dotProduct<dev, K::cstyle_blockbuf>(
 			, sumResult
 			, sumBuf.get_host_access()[0]
 		);
-		sumResult = sumBuf.get_host_access()[0];
 	}
 
+	sumResult = sumBuf.get_host_access()[0];
 	sycl::free(m1_d, queue);
 	sycl::free(m2_d, queue);
 	/* do we need to free the sumBuf here? */

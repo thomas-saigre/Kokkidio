@@ -9,7 +9,7 @@ constexpr Target dev { Target::device };
 template<>
 scalar norm<dev, K::cstyle_blockbuf>(const MatrixXs& mat, int nRuns){
 	int
-		nRows { mat.cols() },
+		nRows { mat.rows() },
 		nCols { mat.cols() };
 
 	auto uCols { static_cast<std::size_t>(nCols) };
@@ -35,6 +35,7 @@ scalar norm<dev, K::cstyle_blockbuf>(const MatrixXs& mat, int nRuns){
 	 * because it will never automatically contain the actual max result,
 	 * but apparently that's how the buffer is created. */
 	scalar maxResult {0};
+	// sycl::buffer<scalar> maxBuf { &maxResult, 1 };
 	
 	for (int iter = 0; iter < nRuns; ++iter){
 		maxResult = 0;
@@ -44,8 +45,19 @@ scalar norm<dev, K::cstyle_blockbuf>(const MatrixXs& mat, int nRuns){
 		 * and hope that the overhead is small... */
 		sycl::buffer<scalar> maxBuf { &maxResult, 1 };
 
+		// /* host side buffer reset */
+		// maxBuf.set_final_data(&sumResult);
+		// maxBuf.set_write_back(true);
+
+		// /* device side buffer reset */
+		// queue.submit( [&](sycl::handler& cgh){
+		// 	auto maxAcc = maxBuf.get_access<sycl::access::mode::read_write>(cgh);
+		// 	cgh.single_task( [=](){
+		// 		maxAcc[0] = 0;
+		// 	});
+		// });
+
 		queue.submit( [&](sycl::handler& cgh){
-			// maxBuf.get_access(cgh)[0] = 0;
 			/* using the combiner sycl::plus, 
 			 * we create an object with the reduction interface - 
 			 * a "reduction variable" */

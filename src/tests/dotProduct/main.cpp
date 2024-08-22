@@ -67,21 +67,25 @@ void runDot(const BenchOpts b){
 	/* Run on GPU */
 	#ifndef KOKKIDIO_CPU_ONLY
 	if ( b.target != "cpu" ){
-		// #ifdef KOKKIDIO_USE_CUDAHIP
+		#ifndef KOKKIDIO_USE_SYCL
 		setNat();
 		using gK = gpu::Kernel;
 		runAndTime<dot_gpu, T::device, gK
 			, gK::cstyle_blockbuf // first one is for warmup
 			, gK::cstyle_blockbuf
 		>( opts, pass, m1, m2, b.nRuns );
-		// #endif
+		#else
+		/* native cstyle dot product is implemented, but incredibly slow:
+		 * each iteration with just 4x10000 takes about a hundredth of a second,
+		 * so the test will never finish */
+		runAndTime<dot_unif, T::device, uK
+			, uK::cstyle // warmup only
+		>( opts, pass, m1, m2, b.nRuns );
+		#endif
 
 		setUni();
-		// #ifndef KOKKIDIO_USE_CUDAHIP
-		opts.skipWarmup = false;
-		// #endif
 		runAndTime<dot_unif, T::device, uK
-			, uK::kokkidio_range // first one is for warmup
+			// , uK::kokkidio_range // warmup is skipped
 			, uK::cstyle
 			KRUN_IF_ALL(
 			, uK::cstyle_nobuf
