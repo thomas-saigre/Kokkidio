@@ -162,15 +162,15 @@ scalar dotProduct(
 			/* Every thread calculates it's column j */
 			auto func = KOKKOS_LAMBDA(int j, scalar& sum){
 				const scalar
-					*d_m1 { m1view.map_target().data() },
-					*d_m2 { m2view.map_target().data() };
+					*m1_d { m1view.map_target().data() },
+					*m2_d { m2view.map_target().data() };
 
 				/* we create a stack variable to track the sum */
 				scalar dot_product {0};
 				for (int i = 0; i < nRows; ++i)
 				{
 					int idx = j * nRows + i;
-					dot_product += d_m1[idx] * d_m2[idx];
+					dot_product += m1_d[idx] * m2_d[idx];
 				}
 				/* we only write to the result variable once (per column) */
 				sum += dot_product;

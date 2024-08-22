@@ -67,14 +67,14 @@ void runDot(const BenchOpts b){
 	/* Run on GPU */
 	#ifndef KOKKIDIO_CPU_ONLY
 	if ( b.target != "cpu" ){
-		#ifdef KOKKIDIO_USE_CUDAHIP
+		// #ifdef KOKKIDIO_USE_CUDAHIP
 		setNat();
 		using gK = gpu::Kernel;
 		runAndTime<dot_gpu, T::device, gK
 			, gK::cstyle_blockbuf // first one is for warmup
 			, gK::cstyle_blockbuf
 		>( opts, pass, m1, m2, b.nRuns );
-		#endif
+		// #endif
 
 		setUni();
 		// #ifndef KOKKIDIO_USE_CUDAHIP

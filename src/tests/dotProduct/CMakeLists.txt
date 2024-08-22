@@ -20,15 +20,21 @@ set_is_cpu(
 if (KOKKIDIO_USE_CUDA OR KOKKIDIO_USE_HIP)
 	target_sources( dotProduct PRIVATE
 		# dotProduct_gpu_cuda_hip.cpp
-		dotProduct_cuda_hip.cpp
+		dotProduct_native_cuda_hip.cpp
 	)
 endif()
 
-if (KOKKIDIO_USE_OMPT)
-	target_sources( dotProduct PRIVATE 
-		dotProduct_gpu_ompt.cpp
+if (KOKKIDIO_USE_SYCL)
+	target_sources( dotProduct PRIVATE
+		dotProduct_native_sycl.cpp
 	)
 endif()
+
+# if (KOKKIDIO_USE_OMPT)
+# 	target_sources( dotProduct PRIVATE 
+# 		dotProduct_gpu_ompt.cpp
+# 	)
+# endif()
 
 conf(dotProduct)
 
