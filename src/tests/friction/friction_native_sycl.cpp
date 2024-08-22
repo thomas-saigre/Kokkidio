@@ -4,7 +4,7 @@ namespace Kokkidio::gpu
 {
 
 template<>
-void axpy<Target::device, Kernel::cstyle>(
+void friction<Target::device, Kernel::cstyle>(
 	ArrayXXs& flux_out,
 	const ArrayXXs& flux_in,
 	const ArrayXXs& d,
@@ -17,9 +17,10 @@ void axpy<Target::device, Kernel::cstyle>(
 	auto alloc = [&](const auto& obj_h){
 		return sycl::malloc_device<scalar>(obj_h.size(), queue);
 	};
-	auto allocAndCopy(const auto& obj_h){
+	auto allocAndCopy = [&](const auto& obj_h){
 		auto data_d = alloc(obj_h);
 		queue.memcpy( data_d, obj_h.data(), obj_h.size() * sizeof(scalar) );
+		return data_d;
 	};
 	auto flux_out_d { alloc(flux_out) };
 	auto flux_in_d  { allocAndCopy(flux_in) };
@@ -29,8 +30,10 @@ void axpy<Target::device, Kernel::cstyle>(
 
 	auto uCols { static_cast<std::size_t>(nCols) };
 	for (int iter = 0; iter < nRuns; ++iter){
-		queue.parallel_for( sycl::range<1>{uCols}, [=](sycl::id<1> idx){
-			auto i = idx[0];
+		queue.parallel_for( sycl::range<1>{uCols}, [=](sycl::id<1> i){
+			using detail::sqrt;
+			using detail::pow;
+			auto idx = i[0];
 			scalar
 				vNorm { sqrt( pow(v_d[2 * idx], 2) + pow(v_d[2 * idx + 1], 2) ) },
 				chezyFac = phys::g * pow(n_d[idx], 2) / pow(d_d[idx], 1./3),
@@ -52,12 +55,12 @@ void axpy<Target::device, Kernel::cstyle>(
 	).wait();
 
 	/* Deallocate device memory */
-	auto freeM = [&](auto&& ptrs){
+	auto freeM = [&]( std::vector<scalar*>&& ptrs ){
 		for ( auto& ptr : ptrs ){
 			sycl::free(ptr, queue);
 		};
 	};
-	freeM(flux_out_d, flux_in_d, d_d, v_d, n_d);
+	freeM( {flux_out_d, flux_in_d, d_d, v_d, n_d} );
 }
 
 } // namespace Kokkidio::gpu

@@ -28,7 +28,7 @@ scalar norm<host, K::cstyle_seq>(const MatrixXs& mat, int nRuns){
 				int idx = j * nRows + i;
 				norm += mat_ptr[idx] * mat_ptr[idx];
 			}
-			result = std::max( result, sqrt(norm) );
+			result = std::max( result, detail::sqrt(norm) );
 		}
 	}
 	return result;
@@ -66,7 +66,7 @@ scalar norm<host, K::cstyle_par>(const MatrixXs& mat, int nRuns){
 					int idx = j * nRows + i;
 					norm += mat_ptr[idx] * mat_ptr[idx];
 				}
-				result_thread = std::max( result_thread, sqrt(norm) );
+				result_thread = std::max( result_thread, detail::sqrt(norm) );
 			}
 			KOKKIDIO_OMP_PRAGMA(for reduction (max:result))
 			for (int i=0; i<omp_get_num_threads(); ++i){

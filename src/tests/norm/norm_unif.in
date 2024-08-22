@@ -55,7 +55,7 @@ scalar norm(const MatrixXs& mat, int nRuns){
 				int idx = j * nRows + i;
 				norm += map_ptr[idx] * map_ptr[idx];
 			}
-			max = std::max( max, sqrt(norm) );
+			max = std::max( max, detail::sqrt(norm) );
 		};
 		reduce(func);
 	}
