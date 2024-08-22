@@ -14,7 +14,13 @@ set_is_cpu(
 
 if (KOKKIDIO_USE_CUDA OR KOKKIDIO_USE_HIP)
 	target_sources( norm PRIVATE
-		norm_cuda_hip.cpp
+		norm_native_cuda_hip.cpp
+	)
+endif()
+
+if (KOKKIDIO_USE_SYCL)
+	target_sources( norm PRIVATE
+		norm_native_sycl.cpp
 	)
 endif()
 
