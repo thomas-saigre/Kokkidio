@@ -77,11 +77,11 @@ void runDot(const BenchOpts b){
 		#endif
 
 		setUni();
-		#ifndef KOKKIDIO_USE_CUDAHIP
+		// #ifndef KOKKIDIO_USE_CUDAHIP
 		opts.skipWarmup = false;
-		#endif
+		// #endif
 		runAndTime<dot_unif, T::device, uK
-			// , uK::kokkidio_range // warmup is skipped
+			, uK::kokkidio_range // first one is for warmup
 			, uK::cstyle
 			KRUN_IF_ALL(
 			, uK::cstyle_nobuf

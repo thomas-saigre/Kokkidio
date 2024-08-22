@@ -94,11 +94,11 @@ void runFric(const BenchOpts& b){
 		#endif
 
 		setUni();
-		#ifndef KOKKIDIO_USE_CUDAHIP
+		// #ifndef KOKKIDIO_USE_CUDAHIP
 		opts.skipWarmup = false;
-		#endif
+		// #endif
 		runAndTime<fric_unif, Target::device, uK
-			// , K::eigen_ranged_chunkbuf // warmup is skipped
+			, uK::kokkidio_range_chunkbuf // warmup is skipped
 			// #ifndef KOKKIDIO_USE_SYCL
 			, uK::cstyle
 			// #endif

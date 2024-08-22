@@ -3,8 +3,8 @@
 namespace Kokkidio::gpu
 {
 
-template<>
-void friction<Target::device, Kernel::cstyle>(
+template<Target target, Kernel k>
+void friction(
 	ArrayXXs& flux_out,
 	const ArrayXXs& flux_in,
 	const ArrayXXs& d,
@@ -29,23 +29,24 @@ void friction<Target::device, Kernel::cstyle>(
 	auto n_d        { allocAndCopy(n) };
 
 	auto uCols { static_cast<std::size_t>(nCols) };
-	for (int iter = 0; iter < nRuns; ++iter){
-		queue.parallel_for( sycl::range<1>{uCols}, [=](sycl::id<1> i){
-			using detail::sqrt;
-			using detail::pow;
-			auto idx = i[0];
-			scalar
-				vNorm { sqrt( pow(v_d[2 * idx], 2) + pow(v_d[2 * idx + 1], 2) ) },
-				chezyFac = phys::g * pow(n_d[idx], 2) / pow(d_d[idx], 1./3),
-				fricFac = chezyFac * vNorm;
-			chezyFac /= d_d[idx];
+	auto run = [&](auto&& func){
+		for (int iter = 0; iter < nRuns; ++iter){
+			queue.parallel_for( sycl::range<1>{uCols}, func ).wait();
+		}
+	};
 
-			for (Index row = 0; row<2; ++row){
-				flux_out_d[3 * idx + row + 1] =
-				(flux_in_d[3 * idx + row + 1] - fricFac * v_d[2 * idx + row] ) /
-				( 1 + chezyFac * ( vNorm + pow(v_d[2 * idx + row], 2) / vNorm ) );
-			}
-		} ).wait();
+	using K = Kernel;
+	if constexpr ( k == K::cstyle ){
+		run( [=](sycl::id<1> idx){
+			auto i = idx[0];
+			#include "impl/friction_cstyle.hpp"
+		} );
+	} else if constexpr ( k == K::eigen_colwise_fullbuf ){
+		auto buf_d = sycl::malloc_device<scalar>(3 * nCols, queue);
+		run( [=](sycl::id<1> idx){
+			auto i = idx[0];
+			#include "impl/friction_buf3.hpp"
+		} );
 	}
 	/* Copy results back to host */
 	queue.memcpy(
@@ -62,5 +63,10 @@ void friction<Target::device, Kernel::cstyle>(
 	};
 	freeM( {flux_out_d, flux_in_d, d_d, v_d, n_d} );
 }
+
+constexpr Target dev {Target::device};
+using K = Kernel;
+template void friction<dev, K::cstyle >(KOKKIDIO_FRICTION_ARGS);
+template void friction<dev, K::eigen_colwise_fullbuf>(KOKKIDIO_FRICTION_ARGS);
 
 } // namespace Kokkidio::gpu

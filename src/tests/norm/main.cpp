@@ -66,11 +66,11 @@ void runNorm(const BenchOpts b){
 		#endif
 
 		setUni();
-		#ifndef KOKKIDIO_USE_CUDAHIP
+		// #ifndef KOKKIDIO_USE_CUDAHIP
 		opts.skipWarmup = false;
-		#endif
+		// #endif
 		runAndTime<norm_unif, T::device, uK
-			// , uK::eigen_ranged // warmup is skipped
+			, uK::kokkidio_range // first one is for warmup
 			, uK::cstyle
 			, uK::kokkidio_index
 			, uK::kokkidio_range

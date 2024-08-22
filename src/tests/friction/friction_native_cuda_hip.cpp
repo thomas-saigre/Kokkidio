@@ -10,63 +10,35 @@ namespace kernel {
 
 __global__ void friction_manual(
 	scalar*,
-	scalar* flux_out,
-	const scalar* flux_in,
-	const scalar* d,
-	const scalar* v,
-	const scalar* n,
+	scalar* flux_out_d,
+	const scalar* flux_in_d,
+	const scalar* d_d,
+	const scalar* v_d,
+	const scalar* n_d,
 	Index nCols
 ){
-	using Kokkidio::detail::pow;
-	using Kokkidio::detail::sqrt;
-	auto idx = static_cast<Index>(blockIdx.x * blockDim.x + threadIdx.x);
-	if ( idx < nCols ){
-		scalar
-			vNorm { sqrt( pow(v[2 * idx], 2) + pow(v[2 * idx + 1], 2) ) },
-			chezyFac = phys::g * pow(n[idx], 2) / pow(d[idx], 1./3),
-			fricFac = chezyFac * vNorm;
-		chezyFac /= d[idx];
-
-		for (Index row = 0; row<2; ++row){
-			flux_out[3 * idx + row + 1] =
-			(flux_in[3 * idx + row + 1] - fricFac * v[2 * idx + row] ) /
-			( 1 + chezyFac * ( vNorm + pow(v[2 * idx + row], 2) / vNorm ) );
-		}
+	auto i = static_cast<Index>(blockIdx.x * blockDim.x + threadIdx.x);
+	if ( i < nCols ){
+		#include "impl/friction_cstyle.hpp"
 	}
 }
 
 
 __global__ void friction_buf3(
-	scalar* buf,
-	scalar* flux_out,
-	const scalar* flux_in,
-	const scalar* d,
-	const scalar* v,
-	const scalar* n,
+	scalar* buf_d,
+	scalar* flux_out_d,
+	const scalar* flux_in_d,
+	const scalar* d_d,
+	const scalar* v_d,
+	const scalar* n_d,
 	Index nCols
 ){
-	auto idx = static_cast<Index>(blockIdx.x * blockDim.x + threadIdx.x);
-	if ( idx < nCols ){
+	auto i = static_cast<Index>(blockIdx.x * blockDim.x + threadIdx.x);
+	if ( i < nCols ){
 		/* nCols was zero when a long was used */
 		// printf("nCols in kernel::friction_buf3: %li\n", nCols);
 		/* it wasn't about Eigen::Map, it was about Eigen::pow */
-		ArrayXXsMap
-			buf_map      {buf     , 3, nCols},
-			flux_out_map {flux_out, 3, nCols};
-		ArrayXXsCMap
-			flux_in_map  {flux_in , 3, nCols},
-			d_map        {d       , 1, nCols},
-			v_map        {v       , 2, nCols},
-			n_map        {n       , 1, nCols};
-	
-		detail::friction_buf3(
-			buf_map.col(idx),
-			flux_out_map.col(idx),
-			flux_in_map.col(idx),
-			d_map.col(idx),
-			v_map.col(idx),
-			n_map.col(idx)
-		);
+		#include "impl/friction_buf3.hpp"
 	}
 }
 
