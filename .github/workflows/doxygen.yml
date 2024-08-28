@@ -4,16 +4,11 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: mattnotmitt/doxygen-action@1.9.5
-      - uses: DenverCoder1/doxygen-github-pages-action@v1
+      - uses: DenverCoder1/doxygen-github-pages-action@v2.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
-          folder: doc
-          doxyfile-path: '../../Doxygen'
