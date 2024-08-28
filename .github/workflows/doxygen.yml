@@ -16,3 +16,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           folder: doc
+          working-directory: '../..'
+          doxyfile-path: './Doxygen'
