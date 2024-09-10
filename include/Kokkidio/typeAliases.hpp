@@ -5,7 +5,7 @@
 // #error "Do not include this file directly. Include Kokkidio/Core.hpp instead."
 // #endif
 
-#ifdef __CUDA_ARCH__
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
 #define EIGEN_DONT_VECTORIZE
 #define EIGEN_DONT_PARALLELIZE
 // #define NDEBUG
