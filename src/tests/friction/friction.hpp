@@ -11,7 +11,7 @@ namespace Kokkidio
 {
 
 namespace phys {
-	KOKKIDIO_HOST_DEVICE_VAR( static constexpr scalar g {9.81}; )
+	KOKKIDIO_CONSTANT( constexpr scalar g {9.81}; )
 	// KOKKIDIO_CONSTANT(g, 9.81);
 }
 

@@ -31,7 +31,7 @@ static_assert( std::is_trivially_copyable_v<ChunkInfo<Target::device>> );
 namespace chunk
 {
 
-KOKKIDIO_HOST_DEVICE_VAR(constexpr int defaultSize {
+KOKKIDIO_CONSTANT(constexpr int defaultSize {
 	std::is_same_v<scalar, float> ? 200 : 100
 };)
 
