@@ -372,8 +372,9 @@ and additionally uses Eigen's {maplink}[`Map`] feature
 to allow the contained data to be treated like an `Eigen` object --
 even on GPUs. 
 More detail is provided in the section 
-// <<_data_structures>>.
-xref:_data_structures[].
+<<_data_structures>>.
+// xref:_data_structures[].
+// <<_data_structures,Data structures>>.
 
 To address the issues regarding parallelism, vectorisation, and readability,
 _Kokkidio_ provides 
@@ -718,6 +719,7 @@ parallel_for<target>(size, KOKKOS_LAMBDA(ParallelRange<target> rng){
 
 See <<_eigenrange, `EigenRange`>> for the data type of the `chunk` parameter.
 
+[id=_data_structures]
 == Data structures
 
 === `ViewMap`
