@@ -170,8 +170,8 @@ for (std::size_t i=0; i<size; ++i){
 ====
 ----
 Eigen::Index size {10};
-double a {0.5};
-Eigen::VectorXd x {size}, y {size}, z {size};
+float a {0.5};
+Eigen::VectorXf x {size}, y {size}, z {size};
 /* fill vectors in some way, e.g. using member func setRandom() ... */
 /* The computation is expressed with the whole object: */
 z = a * x + y;
@@ -370,7 +370,10 @@ wrapping a `Kokkos::View` in a class called `ViewMap`.
 It provides access to the contained `Kokkos::View`, 
 and additionally uses Eigen's {maplink}[`Map`] feature 
 to allow the contained data to be treated like an `Eigen` object --
-even on GPUs. More detail is provided in the section <<_data_structures>>.
+even on GPUs. 
+More detail is provided in the section 
+// <<_data_structures>>.
+xref:_data_structures[].
 
 To address the issues regarding parallelism, vectorisation, and readability,
 _Kokkidio_ provides 
