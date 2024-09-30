@@ -373,8 +373,6 @@ to allow the contained data to be treated like an `Eigen` object --
 even on GPUs. 
 More detail is provided in the section 
 <<_data_structures>>.
-// xref:_data_structures[].
-// <<_data_structures,Data structures>>.
 
 To address the issues regarding parallelism, vectorisation, and readability,
 _Kokkidio_ provides 
