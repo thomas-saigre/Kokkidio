@@ -36,6 +36,8 @@
 **/_build/
 **/_doc/
 **/_install/
+**/_example/
+/lib/kokkos/install/**
 
 # linecount folder
 out/*
